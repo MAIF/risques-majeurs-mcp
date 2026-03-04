@@ -26,6 +26,54 @@ export function createServer() {
           .default(5)
           .describe("Nombre maximum de résultats (1 à 50, défaut: 5)"),
       },
+      outputSchema: z
+        .object({
+          resultats: z
+            .array(
+              z
+                .object({
+                  libelle: z
+                    .string()
+                    .describe("Libellé complet de l'adresse"),
+                  score: z
+                    .number()
+                    .gte(0)
+                    .lte(1)
+                    .describe("Score de pertinence du résultat"),
+                  type: z
+                    .enum(["housenumber", "street", "locality", "municipality"])
+                    .describe("Type de résultat"),
+                  coordonnees: z
+                    .object({
+                      longitude: z
+                        .number()
+                        .describe("Longitude"),
+                      latitude: z
+                        .number()
+                        .describe("Latitude"),
+                    })
+                    .describe("Coordonnées dans le système géodésique EPSG:4326 / WGS 84"),
+                  codeInsee: z
+                    .string()
+                    .describe("Code INSEE de la commune"),
+                  commune: z
+                    .string()
+                    .describe("Nom de la commune"),
+                  codePostal: z
+                    .string()
+                    .describe("Code postal"),
+                  contexte: z
+                    .string()
+                    .describe("Contexte complémentaire à l'adresse"),
+                })
+            )
+            .optional()
+            .describe("Liste de résultats"),
+          erreur: z
+            .string()
+            .optional()
+            .describe("Message d'erreur")
+        }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -43,19 +91,21 @@ export function createServer() {
       const response = await fetch(url);
 
       if (!response.ok) {
+        const erreur = `Erreur lors du géocodage : ${response.status} ${response.statusText}`
         return {
           content: [
             {
               type: "text" as const,
-              text: `Erreur lors du géocodage : ${response.status} ${response.statusText}`,
+              text: JSON.stringify({erreur}, null, 2),
             },
           ],
+          structuredContent: {erreur}
         };
       }
 
       const data = await response.json();
 
-      const results = data.features.map((feature: any) => ({
+      const resultats = data.features.map((feature: any) => ({
         libelle: feature.properties.label,
         score: feature.properties.score,
         type: feature.properties.type,
@@ -73,9 +123,10 @@ export function createServer() {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(results, null, 2),
+            text: JSON.stringify({resultats}, null, 2),
           },
         ],
+        structuredContent: {resultats}
       };
     }
   );
