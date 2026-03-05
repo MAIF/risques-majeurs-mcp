@@ -131,5 +131,89 @@ export function createServer() {
     }
   );
 
+  server.registerTool(
+    "argiles",
+    {
+      title: "Exposition au risque argiles",
+      description: "Fournit le niveau d'exposition au risque de retrait-gonflement des argiles aux coordonnées (longitude, latitude). Utilise l'API de Géorisques.",
+      inputSchema: {
+        longitude: z
+          .number()
+          .gte(-180)
+          .lte(180)
+          .describe("Longitude dans le système géodésique EPSG:4326 / WGS 84"),
+        latitude: z
+          .number()
+          .gte(-90)
+          .lte(90)
+          .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
+      },
+      outputSchema: z
+        .object({
+          exposition: z
+            .object({
+              libelle: z
+                .string()
+                .describe("Libellé du niveau d'exposition"),
+              score: z
+                .number()
+                .gte(0)
+                .lte(3)
+                .describe("Valeur du niveau d'exposition"),
+            })
+            .optional()
+            .describe("Exposition au risque de retrait-gonflement des argiles"),
+          erreur: z
+            .string()
+            .optional()
+            .describe("Message d'erreur")
+        }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    async ({ longitude, latitude }) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+      });
+
+      const url = `https://georisques.gouv.fr/api/v1/rga?${params}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const erreur = `Erreur lors de l'appel à l'API Géorisques : ${response.status} ${response.statusText}`
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({erreur}, null, 2),
+            },
+          ],
+          structuredContent: {erreur}
+        };
+      }
+
+      const data = await response.json();
+
+      const exposition = {
+        libelle: data.exposition,
+        score: parseInt(data.codeExposition)
+      };
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({exposition}, null, 2),
+          },
+        ],
+        structuredContent: {exposition}
+      };
+    }
+  );
+
   return server;
 }
