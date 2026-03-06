@@ -1,5 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import fs from "node:fs/promises";
+import path from "node:path";
+
+const DIST_DIR = path.join(import.meta.dirname, "../dist");
 
 
 export function createServer() {
@@ -7,6 +11,9 @@ export function createServer() {
     name: "risques-majeurs-mcp",
     version: "1.0.0",
   });
+
+
+  //========== TOOL - geocode ==========//
 
   server.registerTool(
     "geocode",
@@ -103,7 +110,7 @@ export function createServer() {
         };
       }
 
-      const data = await response.json();
+      const data : any = await response.json();
 
       const resultats = data.features.map((feature: any) => ({
         libelle: feature.properties.label,
@@ -130,6 +137,11 @@ export function createServer() {
       };
     }
   );
+
+
+  //========== TOOL and APP - argiles ==========//
+
+  const appArgilesResourceUri = "ui://app-argiles/mcp-app.html";
 
   server.registerTool(
     "argiles",
@@ -173,6 +185,13 @@ export function createServer() {
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: true
+      },
+      _meta: {
+        ui: {
+          resourceUri: appArgilesResourceUri,
+          visibility: ["app"]
+        },
+        "ui/resourceUri": appArgilesResourceUri
       }
     },
     async ({ longitude, latitude }) => {
@@ -196,7 +215,14 @@ export function createServer() {
         };
       }
 
-      const data = await response.json();
+      let data = {
+        exposition: 'Non exposé',
+        codeExposition: "0"
+      };
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
 
       const exposition = {
         libelle: data.exposition,
@@ -213,6 +239,26 @@ export function createServer() {
         structuredContent: {exposition}
       };
     }
+  );
+
+  server.registerResource(
+    "app-argiles-ui",
+    appArgilesResourceUri,
+    {
+      mimeType: "text/html;profile=mcp-app"
+    },
+    async () => {
+      const html = await fs.readFile(path.join(DIST_DIR, "client/mcp-app.html"), "utf-8");
+      return {
+        contents: [
+          {
+            uri: appArgilesResourceUri,
+            mimeType: "text/html;profile=mcp-app",
+            text: html
+          },
+        ],
+      };
+    },
   );
 
   return server;
