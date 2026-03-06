@@ -172,6 +172,16 @@ export function createServer() {
                 .gte(0)
                 .lte(3)
                 .describe("Valeur du niveau d'exposition"),
+              longitude: z
+                .number()
+                .gte(-180)
+                .lte(180)
+                .describe("Longitude dans le système géodésique EPSG:4326 / WGS 84"),
+              latitude: z
+                .number()
+                .gte(-90)
+                .lte(90)
+                .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
             })
             .optional()
             .describe("Exposition au risque de retrait-gonflement des argiles"),
@@ -226,7 +236,9 @@ export function createServer() {
 
       const exposition = {
         libelle: data.exposition,
-        score: parseInt(data.codeExposition)
+        score: parseInt(data.codeExposition),
+        longitude,
+        latitude
       };
 
       return {
