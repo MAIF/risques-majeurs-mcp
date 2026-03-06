@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { Map } from "maplibre-gl";
 
 const expositionEl = document.getElementById('exposition')!;
 
@@ -9,7 +10,7 @@ app.ontoolresult = (result: any) => {
     if (result.structuredContent.exposition) {
         expositionEl.innerText = result.structuredContent.exposition.libelle;
 
-        const map = new maplibregl.Map({
+        const map = new Map({
             container: 'map',
             style: 'https://demotiles.maplibre.org/style.json',
             center: [result.structuredContent.exposition.longitude, result.structuredContent.exposition.latitude],
@@ -30,7 +31,7 @@ app.ontoolresult = (result: any) => {
                     'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
                 ],
                 tileSize: 256,
-                maxZoom: 20
+                maxzoom: 20
             });
             map.addLayer({
                 'id': 'grayscale-layer',
@@ -42,7 +43,7 @@ app.ontoolresult = (result: any) => {
                 type: 'raster',
                 tiles: ['https://mapsref.brgm.fr/wxs/georisques/risques?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=ALEARG&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'],
                 tileSize: 256,
-                maxZoom: 20
+                maxzoom: 20
             });
             map.addLayer({
                 'id': 'argiles-wmts-layer',
