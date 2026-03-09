@@ -1,5 +1,6 @@
 import { App } from "@modelcontextprotocol/ext-apps";
 import { Map } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const expositionEl = document.getElementById('exposition')!;
 
