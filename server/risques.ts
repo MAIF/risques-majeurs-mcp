@@ -1,4 +1,16 @@
 import { z } from "zod";
+import { format, parse } from 'date-and-time';
+
+const makeRasterBrgmSource = (layerName: string) => {
+  return {
+    type: 'raster',
+    tiles: [`https://mapsref.brgm.fr/wxs/georisques/risques?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${layerName}&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`],
+    tileSize: 256,
+    maxzoom: 16,
+    attribution: 'Ministère de la Transition Écologique'
+  };
+}
+
 
 export const RISQUES = [
   
@@ -15,7 +27,7 @@ export const RISQUES = [
       const url = `https://georisques.gouv.fr/api/v1/rga?${params}`;
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques : ${response.status} ${response.statusText}`);
+        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'rga' : ${response.status} ${response.statusText}`);
       }
       let data = {
         exposition: 'Non exposé',
@@ -43,15 +55,7 @@ export const RISQUES = [
           })
           .optional()
           .describe("Exposition au risque de retrait-gonflement des argiles"),
-    source: (exposition) => {
-      return {
-        type: 'raster',
-        tiles: ['https://mapsref.brgm.fr/wxs/georisques/risques?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=ALEARG&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'],
-        tileSize: 256,
-        maxzoom: 16,
-        attribution: 'Ministère de la Transition Écologique'
-      };
-    },
+    source: (exposition) => makeRasterBrgmSource('ALEARG'),
     layer: {
       type: 'raster'
     }
@@ -72,7 +76,7 @@ export const RISQUES = [
       const url = `https://georisques.gouv.fr/api/v1/installations_classees?${params}`;
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques : ${response.status} ${response.statusText}`);
+        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'installations_classees' : ${response.status} ${response.statusText}`);
       }
       let data = {
         data: []
@@ -129,7 +133,7 @@ export const RISQUES = [
               .describe("Liste des installation classées à proximité")
           })
           .optional()
-          .describe("Exposition aux risque installations classées"),
+          .describe("Exposition au risque installations classées"),
     source: (exposition) => {
       return {
         type: 'geojson',
@@ -177,4 +181,166 @@ export const RISQUES = [
       }
     }
   },
+  
+
+  //========== RISQUE - Mouvements de terrain ==========//
+
+  {
+    code: 'mouvement_terrain',
+    libelle: 'Mouvements de terrain',
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+        rayon: '5000',
+        page_size: '100'
+      });
+      const url = `https://georisques.gouv.fr/api/v1/mvt?${params}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'mvt' : ${response.status} ${response.statusText}`);
+      }
+      let data = {
+        data: []
+      };
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+      return {
+        total: data.data.length,
+        mouvements: data.data.map(i => {
+          return {
+            type: i.type,
+            lieu: i.lieu,
+            commentaire: i.commentaire_lieu,
+            date: i.date_debut,
+            longitude: i.longitude,
+            latitude: i.latitude
+          }
+        })
+      };
+    },
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre de mouvements de terrain à proximité"),
+            mouvements: z
+              .array(
+                z
+                  .object({
+                    type: z
+                      .string()
+                      .describe("Type de mouvement"),
+                    lieu: z
+                      .string()
+                      .describe("Lieu du mouvement"),
+                    commentaire: z
+                      .string()
+                      .nullable()
+                      .optional()
+                      .describe("Précision sur le lieu"),
+                    date: z
+                      .iso.date()
+                      .nullable()
+                      .optional()
+                      .describe("Date de début"),
+                    longitude: z
+                      .number()
+                      .describe("Longitude"),
+                    latitude: z
+                      .number()
+                      .describe("Latitude"),
+                  })
+              )
+              .describe("Liste des mouvements de terrain à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque mouvements de terrain"),
+    source: (exposition) => makeRasterBrgmSource('CAVITE_LOCALISEE'),
+    layer: {
+      type: 'raster'
+    }
+  },
+  
+
+  //========== RISQUE - Territoires à Risques importants d'Inondation (TRI) ==========//
+
+  {
+    code: 'tri',
+    libelle: "Territoires à Risques importants d'Inondation (TRI)",
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+        rayon: '5000',
+        page_size: '100'
+      });
+      const url = `https://georisques.gouv.fr/api/v1/gaspar/tri?${params}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'tri' : ${response.status} ${response.statusText}`);
+      }
+      let data = {
+        data: []
+      };
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+      return {
+        total: data.data.length,
+        zones: data.data.map(i => {
+          return {
+            libelle: i.libelle_tri,
+            risques: i.liste_libelle_risque.map(r => r.libelle_risque_long),
+            code_insee: i.code_insee,
+            commune: i.libelle_commune,
+            date: i.date_arrete_pcb && format(parse(i.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+          }
+        })
+      };
+    },
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre de zones à risque à proximité"),
+            zones: z
+              .array(
+                z
+                  .object({
+                    libelle: z
+                      .string()
+                      .describe("Libellé de la zone à risque"),
+                    risques: z
+                      .array(
+                        z
+                          .string()
+                      )
+                      .describe("Liste des risques"),
+                    code_insee: z
+                      .string()
+                      .describe("Code INSEE de la commune concernée"),
+                    commune: z
+                      .string()
+                      .describe("Nom de la commune concernée"),
+                    date: z
+                      .iso.date()
+                      .nullable()
+                      .optional()
+                      .describe("Date d'arrêté")
+                  })
+              )
+              .describe("Liste des zones à risque à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque inondation"),
+    source: (exposition) => makeRasterBrgmSource('LIMITETRI'),
+    layer: {
+      type: 'raster'
+    }
+  },
+
 ];
