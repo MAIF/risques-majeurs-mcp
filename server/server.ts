@@ -222,33 +222,6 @@ export function createServer() {
           .default(RISQUES.map(r => r.code))
           .describe('Liste de codes des risques à évaluer')
       },
-      outputSchema: z
-        .object({
-          exposition: z
-            .object({
-              risques: z
-                .object(Object.fromEntries(
-                  RISQUES.map(r => [r.code, r.outputSchema])
-                ))
-                .describe('Exposition aux risques'),
-              longitude: z
-                .number()
-                .gte(-180)
-                .lte(180)
-                .describe("Longitude dans le système géodésique EPSG:4326 / WGS 84"),
-              latitude: z
-                .number()
-                .gte(-90)
-                .lte(90)
-                .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
-            })
-            .optional()
-            .describe("Exposition au risque de retrait-gonflement des argiles"),
-          erreur: z
-            .string()
-            .optional()
-            .describe("Message d'erreur")
-        }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -262,24 +235,19 @@ export function createServer() {
           .filter(r => risques.length === 0 || risques.includes(r.code))
           .map(async (r) => {
             const exposition = await r.fetch(longitude, latitude);
-            return [r.code, exposition];
+            return r.text(exposition);
           })
         )
 
-        const exposition = {
-          risques: Object.fromEntries(expositions),
-          longitude,
-          latitude
-        };
+        const text = expositions.join('\n\n');
 
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({exposition}, null, 2),
+              text,
             },
-          ],
-          structuredContent: {exposition}
+          ]
         };
       } catch (e: any) {
         const erreur = e.message;
@@ -287,10 +255,9 @@ export function createServer() {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({erreur}, null, 2),
+              text: erreur,
             },
-          ],
-          structuredContent: {erreur}
+          ]
         };
       }
     }
