@@ -1,16 +1,13 @@
+import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
 import * as ML from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-const expositionEl = document.getElementById('exposition')!;
-
-const app = new App({ name: "app-argiles-ui", version: "1.0.0" });
+const app = new App({ name: "app-carte-exposition-risques-ui", version: "1.0.0" });
 
 app.ontoolresult = (result: any) => {
     console.log(result);
     if (result.structuredContent.exposition) {
-        expositionEl.innerText = result.structuredContent.exposition.libelle;
-
         // Calculate display and limit bounds
         const SHOW_OFFSET = 0.01;
         const PAD_RATIO = 1.5;
@@ -19,6 +16,7 @@ app.ontoolresult = (result: any) => {
 		const widthBuffer = (max[0] - min[0]) * PAD_RATIO;
 		const heightBuffer = (max[1] - min[1]) * PAD_RATIO;
 
+        // Setup map
         const map = new ML.Map({
             container: 'map',
             style: 'https://demotiles.maplibre.org/style.json',
@@ -62,18 +60,21 @@ app.ontoolresult = (result: any) => {
                 'type': 'raster',
                 'source': 'grayscale'
             });
-            // Data layer
-            map.addSource('argiles-wmts', {
-                type: 'raster',
-                tiles: ['https://mapsref.brgm.fr/wxs/georisques/risques?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=ALEARG&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}'],
-                tileSize: 256,
-                maxzoom: 16,
-                attribution: 'Ministère de la Transition Écologique'
-            });
-            map.addLayer({
-                'id': 'argiles-wmts-layer',
-                'type': 'raster',
-                'source': 'argiles-wmts'
+            // Data layers
+            RISQUES.map(r => {
+                console.log('Risque: ' + r.code);
+                const exposition = result.structuredContent.exposition.risques[r.code];
+                console.log(exposition);
+                if (exposition) {
+                    const source = r.source(exposition);
+                    console.log(source);
+                    map.addSource(r.code, source);
+                    map.addLayer({
+                        ...r.layer,
+                        'id': r.code,
+                        'source': r.code
+                    });
+                }
             });
         });
     }

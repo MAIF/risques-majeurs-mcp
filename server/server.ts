@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { RISQUES } from "./risques";
 
 const DIST_DIR = path.join(import.meta.dirname, "../dist");
 
@@ -13,10 +14,10 @@ export function createServer() {
   });
 
 
-  //========== TOOL - geocode ==========//
+  //========== TOOL - geocodage ==========//
 
   server.registerTool(
-    "geocode",
+    "geocodage",
     {
       title: "Géocodage",
       description: "Géocode une adresse en France : transforme une adresse textuelle en coordonnées GPS (longitude, latitude) et code INSEE de la commune. Utilise l'API de géocodage de l'IGN (Geoplateforme).",
@@ -139,15 +140,68 @@ export function createServer() {
   );
 
 
-  //========== TOOL and APP - argiles ==========//
-
-  const appArgilesResourceUri = "ui://app-argiles/mcp-app.html";
+  //========== TOOL - liste_risques ==========//
 
   server.registerTool(
-    "argiles",
+    "liste_risques",
     {
-      title: "Exposition au risque argiles",
-      description: "Fournit le niveau d'exposition au risque de retrait-gonflement des argiles aux coordonnées (longitude, latitude). Utilise l'API de Géorisques.",
+      title: "Liste des risques disponibles",
+      description: "Liste les risques disponibles pour les outils `Exposition aux risques` et `Carte d'exposition aux risques`.",
+      outputSchema: z
+        .object({
+          risques: z
+            .array(
+              z
+                .object({
+                  code: z
+                    .string()
+                    .describe("Code du risque"),
+                  libelle: z
+                    .string()
+                    .describe("Libellé du risque")
+                })
+            )
+            .optional()
+            .describe("Liste des risques"),
+          erreur: z
+            .string()
+            .optional()
+            .describe("Message d'erreur")
+        }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    async () => {
+      const risques = RISQUES.map(r => {
+        return {
+           code: r.code,
+           libelle: r.libelle
+        };
+      });
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({risques}, null, 2),
+          },
+        ],
+        structuredContent: {risques}
+      };
+    }
+  );
+
+
+  //========== TOOL - exposition_risques ==========//
+
+  server.registerTool(
+    "exposition_risques",
+    {
+      title: "Exposition aux risques",
+      description: "Fournit le niveau d'exposition aux risques aux coordonnées indiquées (longitude, latitude). Utilise l'API de Géorisques.",
       inputSchema: {
         longitude: z
           .number()
@@ -158,20 +212,129 @@ export function createServer() {
           .number()
           .gte(-90)
           .lte(90)
-          .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
+          .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84"),
+        risques: z
+          .array(
+            z
+              .enum(RISQUES.map(r => r.code))
+          )
+          .optional()
+          .default(RISQUES.map(r => r.code))
+          .describe('Liste de codes des risques à évaluer')
       },
       outputSchema: z
         .object({
           exposition: z
             .object({
-              libelle: z
-                .string()
-                .describe("Libellé du niveau d'exposition"),
-              score: z
+              risques: z
+                .object(Object.fromEntries(
+                  RISQUES.map(r => [r.code, r.outputSchema])
+                ))
+                .describe('Exposition aux risques'),
+              longitude: z
                 .number()
-                .gte(0)
-                .lte(3)
-                .describe("Valeur du niveau d'exposition"),
+                .gte(-180)
+                .lte(180)
+                .describe("Longitude dans le système géodésique EPSG:4326 / WGS 84"),
+              latitude: z
+                .number()
+                .gte(-90)
+                .lte(90)
+                .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
+            })
+            .optional()
+            .describe("Exposition au risque de retrait-gonflement des argiles"),
+          erreur: z
+            .string()
+            .optional()
+            .describe("Message d'erreur")
+        }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    async ({ longitude, latitude, risques }) => {
+      try {
+        const expositions = await Promise.all(RISQUES
+          .filter(r => risques.length === 0 || risques.includes(r.code))
+          .map(async (r) => {
+            const exposition = await r.fetch(longitude, latitude);
+            return [r.code, exposition];
+          })
+        )
+
+        const exposition = {
+          risques: Object.fromEntries(expositions),
+          longitude,
+          latitude
+        };
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({exposition}, null, 2),
+            },
+          ],
+          structuredContent: {exposition}
+        };
+      } catch (e: any) {
+        const erreur = e.message;
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({erreur}, null, 2),
+            },
+          ],
+          structuredContent: {erreur}
+        };
+      }
+    }
+  );
+
+
+  //========== TOOL and APP - carte_exposition_risques ==========//
+
+  const appCarteExpositionRisquesResourceUri = "ui://app-carte-exposition-risques/mcp-app.html";
+
+  server.registerTool(
+    "carte_exposition_risques",
+    {
+      title: "Carte d'exposition aux risques",
+      description: "Affiche sur une carte le niveau d'exposition aux risques aux coordonnées indiquées (longitude, latitude). Utilise l'API de Géorisques.",
+      inputSchema: {
+        longitude: z
+          .number()
+          .gte(-180)
+          .lte(180)
+          .describe("Longitude dans le système géodésique EPSG:4326 / WGS 84"),
+        latitude: z
+          .number()
+          .gte(-90)
+          .lte(90)
+          .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84"),
+        risques: z
+          .array(
+            z
+              .enum(RISQUES.map(r => r.code))
+          )
+          .optional()
+          .default(RISQUES.map(r => r.code))
+          .describe('Liste de codes des risques à afficher')
+      },
+      outputSchema: z
+        .object({
+          exposition: z
+            .object({
+              risques: z
+                .object(Object.fromEntries(
+                  RISQUES.map(r => [r.code, r.outputSchema])
+                ))
+                .describe('Exposition aux risques'),
               longitude: z
                 .number()
                 .gte(-180)
@@ -198,22 +361,39 @@ export function createServer() {
       },
       _meta: {
         ui: {
-          resourceUri: appArgilesResourceUri,
+          resourceUri: appCarteExpositionRisquesResourceUri,
           visibility: ["app"]
         },
-        "ui/resourceUri": appArgilesResourceUri
+        "ui/resourceUri": appCarteExpositionRisquesResourceUri
       }
     },
-    async ({ longitude, latitude }) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-      });
+    async ({ longitude, latitude, risques }) => {
+      try {
+        const expositions = await Promise.all(RISQUES
+          .filter(r => risques.length === 0 || risques.includes(r.code))
+          .map(async (r) => {
+            const exposition = await r.fetch(longitude, latitude);
+            return [r.code, exposition];
+          })
+        )
 
-      const url = `https://georisques.gouv.fr/api/v1/rga?${params}`;
-      const response = await fetch(url);
+        const exposition = {
+          risques: Object.fromEntries(expositions),
+          longitude,
+          latitude
+        };
 
-      if (!response.ok) {
-        const erreur = `Erreur lors de l'appel à l'API Géorisques : ${response.status} ${response.statusText}`
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: JSON.stringify({exposition}, null, 2),
+            },
+          ],
+          structuredContent: {exposition}
+        };
+      } catch (e: any) {
+        const erreur = e.message;
         return {
           content: [
             {
@@ -224,38 +404,12 @@ export function createServer() {
           structuredContent: {erreur}
         };
       }
-
-      let data = {
-        exposition: 'Non exposé',
-        codeExposition: "0"
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
-
-      const exposition = {
-        libelle: data.exposition,
-        score: parseInt(data.codeExposition),
-        longitude,
-        latitude
-      };
-
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({exposition}, null, 2),
-          },
-        ],
-        structuredContent: {exposition}
-      };
     }
   );
 
   server.registerResource(
     "app-argiles-ui",
-    appArgilesResourceUri,
+    appCarteExpositionRisquesResourceUri,
     {
       mimeType: "text/html;profile=mcp-app"
     },
@@ -264,7 +418,7 @@ export function createServer() {
       return {
         contents: [
           {
-            uri: appArgilesResourceUri,
+            uri: appCarteExpositionRisquesResourceUri,
             mimeType: "text/html;profile=mcp-app",
             text: html
           },
