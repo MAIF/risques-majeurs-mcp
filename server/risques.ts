@@ -275,7 +275,7 @@ export const RISQUES = [
       let result = `${exposition.total} mouvements de terrain sont recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
         result += 'Voici la liste des mouvements de terrain : ' + exposition.mouvements
-          .map((m: any) => `\n  - ${m.type} au lieu ${m.lieu}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${m.date ? ' le ' + m.date : ''}`);
+          .map((m: any) => `\n  - ${m.type} au lieu ${m.lieu}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${m.date ? ' le ' + format(parse(m.date, 'YYYY-MM-DD'), 'DD/MM/YYYY') : ''}`);
       }
       return result;
     },
