@@ -55,10 +55,10 @@ export const RISQUES = [
           })
           .optional()
           .describe("Exposition au risque de retrait-gonflement des argiles"),
-    text: (exposition) => {
+    text: (exposition: any) => {
       return `Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : ${exposition.libelle} (score de ${exposition.score} sur 3})`;
     },
-    source: (exposition) => makeRasterBrgmSource('ALEARG'),
+    source: (exposition: any) => makeRasterBrgmSource('ALEARG'),
     layer: {
       type: 'raster'
     }
@@ -81,7 +81,7 @@ export const RISQUES = [
       if (!response.ok) {
         throw new Error(`Erreur lors de l'appel à l'API Géorisques 'installations_classees' : ${response.status} ${response.statusText}`);
       }
-      let data = {
+      let data: any = {
         data: []
       };
       const contentType = response.headers.get("Content-Type");
@@ -89,10 +89,10 @@ export const RISQUES = [
         data = await response.json();
       }
       const seveso = data.data
-        .filter(i => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
+        .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
       return {
         total: seveso.length,
-        installations: seveso.map(i => {
+        installations: seveso.map((i: any) => {
           let seveso = 'non_seveso';
           switch (i.statutSeveso) {
             case 'Seveso seuil haut':
@@ -139,20 +139,20 @@ export const RISQUES = [
           })
           .optional()
           .describe("Exposition au risque installations classées Seveso"),
-    text: (exposition) => {
+    text: (exposition: any) => {
       let result = `${exposition.total} installations classées pour la protection de l'environnement (ICPE) avec le statut Seveso sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
         result += 'Voici la liste des installations : ' + exposition.installations
-          .map(i => `\n  - ${i.raisonSociale} (${i.seveso.replaceAll('_', ' ')})`);
+          .map((i: any) => `\n  - ${i.raisonSociale} (${i.seveso.replaceAll('_', ' ')})`);
       }
       return result;
     },
-    source: (exposition) => {
+    source: (exposition: any) => {
       return {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: exposition.installations.map(i => {
+          features: exposition.installations.map((i: any) => {
             let description = i.raisonSociale;
             let color = '#333333';
             switch (i.seveso) {
@@ -212,7 +212,7 @@ export const RISQUES = [
       if (!response.ok) {
         throw new Error(`Erreur lors de l'appel à l'API Géorisques 'mvt' : ${response.status} ${response.statusText}`);
       }
-      let data = {
+      let data: any = {
         data: []
       };
       const contentType = response.headers.get("Content-Type");
@@ -221,14 +221,14 @@ export const RISQUES = [
       }
       return {
         total: data.data.length,
-        mouvements: data.data.map(i => {
+        mouvements: data.data.map((m: any) => {
           return {
-            type: i.type,
-            lieu: i.lieu,
-            commentaire: i.commentaire_lieu,
-            date: i.date_debut,
-            longitude: i.longitude,
-            latitude: i.latitude
+            type: m.type,
+            lieu: m.lieu,
+            commentaire: m.commentaire_lieu,
+            date: m.date_debut,
+            longitude: m.longitude,
+            latitude: m.latitude
           }
         })
       };
@@ -271,15 +271,15 @@ export const RISQUES = [
           })
           .optional()
           .describe("Exposition au risque mouvements de terrain"),
-    text: (exposition) => {
+    text: (exposition: any) => {
       let result = `${exposition.total} mouvements de terrain sont recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
         result += 'Voici la liste des mouvements de terrain : ' + exposition.mouvements
-          .map(m => `\n  - ${m.type} au lieu ${m.lieu}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${m.date ? ' le ' + m.date : ''}`);
+          .map((m: any) => `\n  - ${m.type} au lieu ${m.lieu}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${m.date ? ' le ' + m.date : ''}`);
       }
       return result;
     },
-    source: (exposition) => makeRasterBrgmSource('CAVITE_LOCALISEE'),
+    source: (exposition: any) => makeRasterBrgmSource('CAVITE_LOCALISEE'),
     layer: {
       type: 'raster'
     }
@@ -302,7 +302,7 @@ export const RISQUES = [
       if (!response.ok) {
         throw new Error(`Erreur lors de l'appel à l'API Géorisques 'tri' : ${response.status} ${response.statusText}`);
       }
-      let data = {
+      let data: any = {
         data: []
       };
       const contentType = response.headers.get("Content-Type");
@@ -311,13 +311,13 @@ export const RISQUES = [
       }
       return {
         total: data.data.length,
-        zones: data.data.map(i => {
+        zones: data.data.map((z: any) => {
           return {
-            libelle: i.libelle_tri,
-            risques: i.liste_libelle_risque.map(r => r.libelle_risque_long),
-            code_insee: i.code_insee,
-            commune: i.libelle_commune,
-            date: i.date_arrete_pcb && format(parse(i.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            libelle: z.libelle_tri,
+            risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+            code_insee: z.code_insee,
+            commune: z.libelle_commune,
+            date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
           }
         })
       };
@@ -358,15 +358,15 @@ export const RISQUES = [
           })
           .optional()
           .describe("Exposition au risque inondation"),
-    text: (exposition) => {
+    text: (exposition: any) => {
       let result = `${exposition.total} zones à risque d'inondation recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
         result += 'Voici la liste des zones et des risques concernés : ' + exposition.zones
-          .map(z => `\n  - ${z.libelle} exposée aux risques ${z.risques.join(', ')}${z.commune ? ' sur la commune de ' + z.commune : ''}`);
+          .map((z: any) => `\n  - ${z.libelle} exposée aux risques ${z.risques.join(', ')}${z.commune ? ' sur la commune de ' + z.commune : ''}`);
       }
       return result;
     },
-    source: (exposition) => makeRasterBrgmSource('LIMITETRI'),
+    source: (exposition: any) => makeRasterBrgmSource('LIMITETRI'),
     layer: {
       type: 'raster'
     }

@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { RISQUES } from "./risques";
+import { RISQUES } from "./risques.js";
 
 const DIST_DIR = path.join(import.meta.dirname, "../dist");
 
@@ -176,7 +176,7 @@ export function createServer() {
       }
     },
     async () => {
-      const risques = RISQUES.map(r => {
+      const risques = RISQUES.map((r: any) => {
         return {
            code: r.code,
            libelle: r.libelle
@@ -216,10 +216,10 @@ export function createServer() {
         risques: z
           .array(
             z
-              .enum(RISQUES.map(r => r.code))
+              .enum(RISQUES.map((r: any) => r.code))
           )
           .optional()
-          .default(RISQUES.map(r => r.code))
+          .default(RISQUES.map((r: any) => r.code))
           .describe('Liste de codes des risques à évaluer')
       },
       annotations: {
@@ -232,8 +232,8 @@ export function createServer() {
     async ({ longitude, latitude, risques }) => {
       try {
         const expositions = await Promise.all(RISQUES
-          .filter(r => risques.length === 0 || risques.includes(r.code))
-          .map(async (r) => {
+          .filter((r: any) => risques.length === 0 || risques.includes(r.code))
+          .map(async (r: any) => {
             const exposition = await r.fetch(longitude, latitude);
             return r.text(exposition);
           })
@@ -287,10 +287,10 @@ export function createServer() {
         risques: z
           .array(
             z
-              .enum(RISQUES.map(r => r.code))
+              .enum(RISQUES.map((r: any) => r.code))
           )
           .optional()
-          .default(RISQUES.map(r => r.code))
+          .default(RISQUES.map((r: any) => r.code))
           .describe('Liste de codes des risques à afficher')
       },
       outputSchema: z
@@ -299,7 +299,7 @@ export function createServer() {
             .object({
               risques: z
                 .object(Object.fromEntries(
-                  RISQUES.map(r => [r.code, r.outputSchema])
+                  RISQUES.map((r: any) => [r.code, r.outputSchema])
                 ))
                 .describe('Exposition aux risques'),
               longitude: z
@@ -337,8 +337,8 @@ export function createServer() {
     async ({ longitude, latitude, risques }) => {
       try {
         const expositions = await Promise.all(RISQUES
-          .filter(r => risques.length === 0 || risques.includes(r.code))
-          .map(async (r) => {
+          .filter((r: any) => risques.length === 0 || risques.includes(r.code))
+          .map(async (r: any) => {
             const exposition = await r.fetch(longitude, latitude);
             return [r.code, exposition];
           })
