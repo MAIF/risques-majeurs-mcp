@@ -90,6 +90,7 @@ export function createServer() {
       }
     },
     async ({ adresse, limite }) => {
+      console.log(`Outil 'geocodage' : ${adresse} / ${limite}`);
       const params = new URLSearchParams({
         q: adresse,
         limit: String(limite),
@@ -99,8 +100,10 @@ export function createServer() {
       const response = await fetch(url);
 
       if (!response.ok) {
-        const erreur = `Erreur lors du géocodage : ${response.status} ${response.statusText}`
+        const erreur = `Erreur lors du géocodage : ${response.status} ${response.statusText}`;
+        console.error(erreur);
         return {
+          isError: true,
           content: [
             {
               type: "text" as const,
@@ -176,6 +179,7 @@ export function createServer() {
       }
     },
     async () => {
+      console.log(`Outil 'liste_risques'`);
       const risques = RISQUES.map((r: any) => {
         return {
            code: r.code,
@@ -230,6 +234,7 @@ export function createServer() {
       }
     },
     async ({ longitude, latitude, risques }) => {
+      console.log(`Outil 'exposition_risques' : ${longitude},${latitude} / ${risques}`);
       try {
         const expositions = await Promise.all(RISQUES
           .filter((r: any) => risques.length === 0 || risques.includes(r.code))
@@ -251,7 +256,9 @@ export function createServer() {
         };
       } catch (e: any) {
         const erreur = e.message;
+        console.error(erreur);
         return {
+          isError: true,
           content: [
             {
               type: "text" as const,
@@ -301,7 +308,7 @@ export function createServer() {
                 .object(Object.fromEntries(
                   RISQUES.map((r: any) => [r.code, r.outputSchema])
                 ))
-                .describe('Exposition aux risques'),
+                .describe('Exposition par risque'),
               longitude: z
                 .number()
                 .gte(-180)
@@ -314,7 +321,7 @@ export function createServer() {
                 .describe("Latitude dans le système géodésique EPSG:4326 / WGS 84")
             })
             .optional()
-            .describe("Exposition au risque de retrait-gonflement des argiles"),
+            .describe("Exposition aux risques"),
           erreur: z
             .string()
             .optional()
@@ -329,12 +336,13 @@ export function createServer() {
       _meta: {
         ui: {
           resourceUri: appCarteExpositionRisquesResourceUri,
-          visibility: ["app"]
+          visibility: ["model", "app"]
         },
         "ui/resourceUri": appCarteExpositionRisquesResourceUri
       }
     },
     async ({ longitude, latitude, risques }) => {
+      console.log(`Outil 'carte_exposition_risques' : ${longitude},${latitude} / ${risques}`);
       try {
         const expositions = await Promise.all(RISQUES
           .filter((r: any) => risques.length === 0 || risques.includes(r.code))
@@ -361,7 +369,9 @@ export function createServer() {
         };
       } catch (e: any) {
         const erreur = e.message;
+        console.error(erreur);
         return {
+          isError: true,
           content: [
             {
               type: "text" as const,
@@ -375,7 +385,7 @@ export function createServer() {
   );
 
   server.registerResource(
-    "app-argiles-ui",
+    "carte_exposition_risques_ui",
     appCarteExpositionRisquesResourceUri,
     {
       mimeType: "text/html;profile=mcp-app"
@@ -387,7 +397,21 @@ export function createServer() {
           {
             uri: appCarteExpositionRisquesResourceUri,
             mimeType: "text/html;profile=mcp-app",
-            text: html
+            text: html,
+            _meta: {
+              ui: {
+                csp: {
+                  connectDomains: [
+                    "https://demotiles.maplibre.org",
+                    "https://a.basemaps.cartocdn.com",
+                    "https://b.basemaps.cartocdn.com",
+                    "https://c.basemaps.cartocdn.com",
+                    "https://d.basemaps.cartocdn.com",
+                    "https://mapsref.brgm.fr",
+                  ],
+                },
+              },
+            },
           },
         ],
       };

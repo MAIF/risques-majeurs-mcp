@@ -1,6 +1,6 @@
 import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
-import * as ML from "maplibre-gl";
+import { Map, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const app = new App({ name: "app-carte-exposition-risques-ui", version: "1.0.0" });
@@ -17,7 +17,7 @@ app.ontoolresult = (result: any) => {
 		const heightBuffer = (max[1] - min[1]) * PAD_RATIO;
 
         // Setup map
-        const map = new ML.Map({
+        const map = new Map({
             container: 'map',
             style: 'https://demotiles.maplibre.org/style.json',
             center: [result.structuredContent.exposition.longitude, result.structuredContent.exposition.latitude],
@@ -33,11 +33,11 @@ app.ontoolresult = (result: any) => {
         
         map.fitBounds([min, max]);
 
-        map.addControl(new ML.NavigationControl({
+        map.addControl(new NavigationControl({
             showZoom: true
         }));
 
-        new ML.Marker()
+        new Marker()
             .setLngLat([result.structuredContent.exposition.longitude, result.structuredContent.exposition.latitude])
             .addTo(map);
 
@@ -66,13 +66,13 @@ app.ontoolresult = (result: any) => {
                 const exposition = result.structuredContent.exposition.risques[r.code];
                 console.log(exposition);
                 if (exposition) {
-                    const source = r.source(exposition);
+                    const source: any = r.source(exposition);
                     console.log(source);
                     map.addSource(r.code, source);
                     map.addLayer({
                         ...r.layer,
-                        'id': r.code,
-                        'source': r.code
+                        id: r.code,
+                        source: r.code
                     });
                 }
             });

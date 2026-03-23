@@ -4,10 +4,18 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { Request, Response } from "express";
 import { createServer } from "./server.js";
+import cors from "cors";
 
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
-const app = createMcpExpressApp();
+const app = createMcpExpressApp({host: '0.0.0.0'});
+
+app.use(
+  cors({
+    origin: "*",
+    exposedHeaders: ["mcp-session-id"],
+  }),
+);
 
 // Map des transports actifs, indexés par session ID
 const transports: Record<string, StreamableHTTPServerTransport> = {};
@@ -48,6 +56,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
     }
 
     // Cas 3 : requête invalide
+    console.error("Session ID invalide ou manquant");
     res.status(400).json({
       jsonrpc: "2.0",
       error: { code: -32000, message: "Session ID invalide ou manquant" },
@@ -65,10 +74,22 @@ app.post("/mcp", async (req: Request, res: Response) => {
   }
 });
 
+// --- GET /mcp : ressources et flux SSE pour les notifications ---
+app.get("/mcp", async (req: Request, res: Response) => {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  if (!sessionId || !transports[sessionId]) {
+    console.error("Session ID invalide ou manquant");
+    res.status(400).send("Session ID invalide ou manquant");
+    return;
+  }
+  await transports[sessionId].handleRequest(req, res);
+});
+
 // --- DELETE /mcp : fermeture de session ---
 app.delete("/mcp", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
   if (!sessionId || !transports[sessionId]) {
+    console.error("Session ID invalide ou manquant");
     res.status(400).send("Session ID invalide ou manquant");
     return;
   }
