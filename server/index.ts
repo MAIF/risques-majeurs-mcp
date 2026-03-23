@@ -65,6 +65,16 @@ app.post("/mcp", async (req: Request, res: Response) => {
   }
 });
 
+// --- DELETE /mcp : fermeture de session ---
+app.delete("/mcp", async (req: Request, res: Response) => {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  if (!sessionId || !transports[sessionId]) {
+    res.status(400).send("Session ID invalide ou manquant");
+    return;
+  }
+  await transports[sessionId].handleRequest(req, res);
+});
+
 // Lancement du serveur HTTP
 app.listen(PORT, () => {
   console.log(`Serveur MCP risques-majeurs (Streamable HTTP) sur http://localhost:${PORT}/mcp`);
