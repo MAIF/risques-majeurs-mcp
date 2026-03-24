@@ -3,7 +3,7 @@ import { App } from "@modelcontextprotocol/ext-apps";
 import { Map, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./mcp-app.css";
-import { FullscreenControl } from './controls.ts';
+import { FullscreenControl, LayersControl } from './controls.ts';
 
 const app = new App(
     { name: "app-carte-exposition-risques-ui", version: "1.0.0" },
@@ -79,11 +79,15 @@ app.ontoolresult = (result: any) => {
                 'source': 'grayscale'
             });
             // Data layers
-            RISQUES.map(r => {
+            let layers: any = RISQUES
+                .filter(r => {
                 console.log('Risque: ' + r.code);
                 const exposition = result.structuredContent.exposition.risques[r.code];
                 console.log(exposition);
-                if (exposition) {
+                    return exposition;
+                })
+                .map(r => {
+                    const exposition = result.structuredContent.exposition.risques[r.code];
                     const source: any = r.source(exposition);
                     console.log(source);
                     map.addSource(r.code, source);
@@ -92,8 +96,14 @@ app.ontoolresult = (result: any) => {
                         id: r.code,
                         source: r.code
                     });
-                }
+                    return [r.nom, [r.code]];
             });
+
+            // Create control
+            if (layers.length > 1) {
+                let label_to_layer_ids = Object.fromEntries(layers);
+                map.addControl(new LayersControl(label_to_layer_ids), 'top-left');
+            }
 
             map.resize();
 

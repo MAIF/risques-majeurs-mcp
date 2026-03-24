@@ -17,3 +17,8 @@ body {
     padding: 0 5px !important;
     width: auto !important;
 }
+
+.layers-control .layer-control {
+    display: block;
+    padding: 0.2em;
+}

@@ -20,6 +20,7 @@ export const RISQUES = [
   {
     code: 'argiles',
     libelle: 'Retrait-gonflement des argiles',
+    nom: 'Argiles',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -70,6 +71,7 @@ export const RISQUES = [
   {
     code: 'icpe',
     libelle: 'Installations classées pour la protection de l\'environnement (ICPE)',
+    nom: 'ICPE',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -201,6 +203,7 @@ export const RISQUES = [
   {
     code: 'mouvement_terrain',
     libelle: 'Mouvements de terrain',
+    nom: 'Mouvements de terrain',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -291,6 +294,7 @@ export const RISQUES = [
   {
     code: 'tri',
     libelle: "Territoires à Risques importants d'Inondation (TRI)",
+    nom: 'Inondations',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
