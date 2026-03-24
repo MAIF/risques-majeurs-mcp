@@ -12,3 +12,8 @@ body {
     width: 100%;
     height: 100%;
 }
+
+.maplibregl-ctrl-toggle-displaymode {
+    padding: 0 5px !important;
+    width: auto !important;
+}
