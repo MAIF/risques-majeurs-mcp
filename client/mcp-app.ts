@@ -2,8 +2,14 @@ import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
 import { Map, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "./mcp-app.css";
 
-const app = new App({ name: "app-carte-exposition-risques-ui", version: "1.0.0" });
+const app = new App(
+    { name: "app-carte-exposition-risques-ui", version: "1.0.0" },
+    {},
+    // We manage size-changed messages manually to avoid infinite loop when relying on 'vw' and 'vh' units
+    { autoResize: false }
+);
 
 app.ontoolresult = (result: any) => {
     console.log(result);
@@ -76,6 +82,14 @@ app.ontoolresult = (result: any) => {
                     });
                 }
             });
+
+            map.resize();
+
+            app.sendSizeChanged({
+                width: document.documentElement.scrollWidth,
+                height: document.documentElement.scrollHeight
+            });
+            app.sendLog({ level: 'info', data: 'Map is ready'})
         });
     }
 };
