@@ -1,32 +1,9 @@
 import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
-import { Map, Marker, NavigationControl, type IControl } from "maplibre-gl";
+import { Map, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./mcp-app.css";
-
-class FullscreenControl implements IControl {
-    _map: Map;
-    _container: HTMLElement;
-    _onClick: any;
-    constructor(onClick: any) {
-        this._onClick = onClick;
-    }
-    onAdd(map: Map) {
-        this._map = map;
-        this._container = document.createElement('div');
-        this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
-        let btn = document.createElement('button');
-        btn.className = 'maplibregl-ctrl-toggle-displaymode';
-        btn.textContent = 'Toggle fullscreen';
-        btn.addEventListener('click', this._onClick);
-        this._container.appendChild(btn);
-        return this._container;
-    }
-    onRemove() {
-        this._container.remove();
-        this._map = undefined;
-    }
-}
+import { FullscreenControl } from './controls.ts';
 
 const app = new App(
     { name: "app-carte-exposition-risques-ui", version: "1.0.0" },
