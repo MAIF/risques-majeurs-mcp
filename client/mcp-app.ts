@@ -81,9 +81,9 @@ app.ontoolresult = (result: any) => {
             // Data layers
             let activeRisks: any[] = RISQUES
                 .filter(r => {
-                console.log('Risque: ' + r.code);
-                const exposition = result.structuredContent.exposition.risques[r.code];
-                console.log(exposition);
+                    console.log('Risque: ' + r.code);
+                    const exposition = result.structuredContent.exposition.risques[r.code];
+                    console.log(exposition);
                     return exposition;
                 });
             let layers: any[] = activeRisks
@@ -102,7 +102,7 @@ app.ontoolresult = (result: any) => {
                         label: r.nom,
                         legend: r.legend(exposition)
                     };
-            });
+                });
 
             // Create control
             if (layers.length > 1) {
@@ -111,7 +111,7 @@ app.ontoolresult = (result: any) => {
             }
 
             // Legends
-            map.addControl(new LegendsControl(layers.map(l => [l.id, l.legend])), 'bottom-left');
+            map.addControl(new LegendsControl(layers), 'bottom-left');
 
             map.resize();
 

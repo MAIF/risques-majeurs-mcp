@@ -97,8 +97,8 @@ export class LegendsControl implements IControl {
     _container: HTMLElement;
     _open: boolean = false;
     _btn: Node;
-    _legends: Array<[string, Node]>;
-    constructor(legends: Array<[string, Node]>) {
+    _legends: any[];
+    constructor(legends: any[]) {
         this._legends = legends;
     }
     onAdd(map: Map) {
@@ -129,8 +129,16 @@ export class LegendsControl implements IControl {
     }
     show() {
         const nodes = this._legends
-            .filter(l => this._map.getLayoutProperty(l[0], "visibility") !== "none")
-            .map(l => l[1]);
+            .filter(l => this._map.getLayoutProperty(l.id, "visibility") !== "none")
+            .map(l => {
+                const div = document.createElement('div');
+                div.className = 'legend';
+                const label = document.createElement('span');
+                label.innerText = l.label;
+                div.appendChild(label);
+                div.appendChild(l.legend);
+                return div;
+            });
         this._container.replaceChildren(this._btn, ...nodes);
         this._open = true;
     }

@@ -10,7 +10,7 @@ import {
   makeTriangleDownSvg,
   makeStarSvg,
   makeLegends
-} from './utils.js'
+} from './utils.js';
 
 
 export const RISQUES = [

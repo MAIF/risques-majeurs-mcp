@@ -42,7 +42,17 @@ body {
     width: auto !important;
 }
 
-.legends-control ul {
+.legends-control .legend {
+    display: flex;
+    flex-direction: column;
+    padding: .2em;
+}
+
+.legends-control .legend > span {
+    font-weight: bold;
+}
+
+.legends-control  .legend ul {
     list-style-type: none;
     margin: 0;
     padding: 0;
