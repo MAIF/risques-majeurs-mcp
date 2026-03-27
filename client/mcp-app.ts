@@ -3,7 +3,7 @@ import { App } from "@modelcontextprotocol/ext-apps";
 import { Map, Marker, NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./mcp-app.css";
-import { FullscreenControl, LayersControl } from './controls.ts';
+import { FullscreenControl, LayersControl, LegendsControl } from './controls.ts';
 
 const app = new App(
     { name: "app-carte-exposition-risques-ui", version: "1.0.0" },
@@ -79,13 +79,14 @@ app.ontoolresult = (result: any) => {
                 'source': 'grayscale'
             });
             // Data layers
-            let layers: any = RISQUES
+            let activeRisks: any[] = RISQUES
                 .filter(r => {
                 console.log('Risque: ' + r.code);
                 const exposition = result.structuredContent.exposition.risques[r.code];
                 console.log(exposition);
                     return exposition;
-                })
+                });
+            let layers: any[] = activeRisks
                 .map(r => {
                     const exposition = result.structuredContent.exposition.risques[r.code];
                     const source: any = r.source(exposition);
@@ -96,14 +97,21 @@ app.ontoolresult = (result: any) => {
                         id: r.code,
                         source: r.code
                     });
-                    return [r.nom, [r.code]];
+                    return {
+                        id: r.code,
+                        label: r.nom,
+                        legend: r.legend(exposition)
+                    };
             });
 
             // Create control
             if (layers.length > 1) {
-                let label_to_layer_ids = Object.fromEntries(layers);
+                let label_to_layer_ids = Object.fromEntries(layers.map(l => [l.label, [l.id]]));
                 map.addControl(new LayersControl(label_to_layer_ids), 'top-left');
             }
+
+            // Legends
+            map.addControl(new LegendsControl(layers.map(l => [l.id, l.legend])), 'bottom-left');
 
             map.resize();
 

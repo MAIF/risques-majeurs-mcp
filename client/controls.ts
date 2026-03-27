@@ -91,3 +91,47 @@ export class LayersControl implements IControl {
     this._map = undefined;
   }
 }
+
+export class LegendsControl implements IControl {
+    _map: Map;
+    _container: HTMLElement;
+    _open: boolean = false;
+    _btn: Node;
+    _legends: Array<[string, Node]>;
+    constructor(legends: Array<[string, Node]>) {
+        this._legends = legends;
+    }
+    onAdd(map: Map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.classList.add(
+            "maplibregl-ctrl",
+            "maplibregl-ctrl-group",
+            "legends-control"
+        );
+        this._btn = document.createElement('button');
+        this._btn.className = 'toggle-legends';
+        this._btn.textContent = 'Legends';
+        this._btn.addEventListener('click', () => this.togglePopup());
+        this.hide();
+        return this._container;
+    }
+    onRemove() {
+        this._container.remove();
+        this._map = undefined;
+    }
+    togglePopup() {
+        this._open ? this.hide() : this.show();
+    }
+    hide() {
+        this._container.replaceChildren(this._btn);
+        this._open = false;
+    }
+    show() {
+        const nodes = this._legends
+            .filter(l => this._map.getLayoutProperty(l[0], "visibility") !== "none")
+            .map(l => l[1]);
+        this._container.replaceChildren(this._btn, ...nodes);
+        this._open = true;
+    }
+}

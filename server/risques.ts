@@ -1,15 +1,16 @@
 import { z } from "zod";
 import { format, parse } from 'date-and-time';
-
-const makeRasterBrgmSource = (layerName: string) => {
-  return {
-    type: 'raster',
-    tiles: [`https://mapsref.brgm.fr/wxs/georisques/risques?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${layerName}&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`],
-    tileSize: 256,
-    maxzoom: 16,
-    attribution: 'Ministère de la Transition Écologique'
-  };
-}
+import {
+  makeRasterGeorisqueSource,
+  makeCircleSvg,
+  makeSquareSvg,
+  makeLineSvg,
+  makeDiamondSvg,
+  makeTriangleUpSvg,
+  makeTriangleDownSvg,
+  makeStarSvg,
+  makeLegends
+} from './utils.js'
 
 
 export const RISQUES = [
@@ -59,10 +60,15 @@ export const RISQUES = [
     text: (exposition: any) => {
       return `Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : ${exposition.libelle} (score de ${exposition.score} sur 3})`;
     },
-    source: (exposition: any) => makeRasterBrgmSource('ALEARG'),
+    source: (exposition: any) => makeRasterGeorisqueSource('ALEARG'),
     layer: {
       type: 'raster'
-    }
+    },
+    legend: (exposition: any) : Node => makeLegends([
+      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#ef7070', strokeColor: '#ef7070', strokeWidth: 1 })!, 'Exposition forte'],
+      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#efc270', strokeColor: '#efc270', strokeWidth: 1 })!, 'Exposition moyenne'],
+      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#f0f0bd', strokeColor: '#f0f0bd', strokeWidth: 1 })!, 'Exposition faible']
+    ])
   },
   
 
@@ -156,15 +162,15 @@ export const RISQUES = [
           type: 'FeatureCollection',
           features: exposition.installations.map((i: any) => {
             let description = i.raisonSociale;
-            let color = '#333333';
+            let color = '#000000';
             switch (i.seveso) {
               case 'seveso_seuil_haut':
                 description += ' (Seveso seuil haut)';
-                color = '#ff0000';
+                color = '#fc0d1a';
                 break;
               case 'seveso_seuil_bas':
                 description += ' (Seveso seuil bas)';
-                color = '#ff9900';
+                color = '#2e404f';
                 break;
               default:
                 description += ' (Non Seveso)';
@@ -194,7 +200,12 @@ export const RISQUES = [
       'paint': {
         'circle-color': ['get', 'color']
       }
-    }
+    },
+    legend: (exposition: any) : Node => makeLegends([
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
+    ])
   },
   
 
@@ -282,10 +293,21 @@ export const RISQUES = [
       }
       return result;
     },
-    source: (exposition: any) => makeRasterBrgmSource('CAVITE_LOCALISEE'),
+    source: (exposition: any) => makeRasterGeorisqueSource('CAVITE_LOCALISEE'),
     layer: {
       type: 'raster'
-    }
+    },
+    legend: (exposition: any) : Node => makeLegends([
+      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Cave'],
+      [ makeDiamondSvg({ fillOpacity: 1, fillColor: '#87de4d', strokeColor: '#87de4d', strokeWidth: 1 })!, 'Carrière'],
+      [ makeTriangleDownSvg({ fillOpacity: 1, fillColor: '#f5f515', strokeColor: '#f5f515', strokeWidth: 1 })!, 'Naturelle'],
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#ffffff', strokeColor: '#ff0000', strokeWidth: 5 })!, 'Indéterminée'],
+      [ makeTriangleUpSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Galerie'],
+      [ makeStarSvg({ fillOpacity: 1, fillColor: '#0100ff', strokeColor: '#0100ff', strokeWidth: 1 })!, 'Ouvrage civil'],
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#660066', strokeColor: '#660066', strokeWidth: 1 })!, 'Ouvrage militaire'],
+      [ makeStarSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Puits'],
+      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#6600ff', strokeColor: '#6600ff', strokeWidth: 1 })!, 'Souterrain']
+    ])
   },
   
 
@@ -370,10 +392,13 @@ export const RISQUES = [
       }
       return result;
     },
-    source: (exposition: any) => makeRasterBrgmSource('LIMITETRI'),
+    source: (exposition: any) => makeRasterGeorisqueSource('LIMITETRI_FXX'),
     layer: {
       type: 'raster'
-    }
+    },
+    legend: (exposition: any) : Node => makeLegends([
+      [ makeLineSvg({ fillOpacity: 1, fillColor: '#e53075', strokeColor: '#e53075', strokeWidth: 15 })!, 'Périmètre de TRI']
+    ])
   },
 
 ];

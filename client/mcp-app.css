@@ -18,7 +18,43 @@ body {
     width: auto !important;
 }
 
+.layers-control {
+    padding: .2em;
+}
+
 .layers-control .layer-control {
     display: block;
-    padding: 0.2em;
+}
+
+.maplibregl-ctrl-bottom-left {
+    z-index: 3;
+}
+
+.legends-control {
+    display: flex;
+    flex-direction: row;
+    align-items: end;
+    padding: .2em;
+}
+
+.legends-control .toggle-legends {
+    padding: 0 .5em !important;
+    width: auto !important;
+}
+
+.legends-control ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.legends-control .legend-entry {
+    text-wrap: nowrap;
+}
+
+.legends-control .legend-entry svg {
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    vertical-align: middle;
 }
