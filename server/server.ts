@@ -336,9 +336,9 @@ export function createServer() {
       _meta: {
         ui: {
           resourceUri: appCarteExpositionRisquesResourceUri,
-          visibility: ["model", "app"]
+          // visibility: ["model", "app"]
         },
-        "ui/resourceUri": appCarteExpositionRisquesResourceUri
+        //"ui/resourceUri": appCarteExpositionRisquesResourceUri
       }
     },
     async ({ longitude, latitude, risques }) => {
@@ -388,7 +388,7 @@ export function createServer() {
     "carte_exposition_risques_ui",
     appCarteExpositionRisquesResourceUri,
     {
-      mimeType: "text/html;profile=mcp-app"
+      //mimeType: "text/html;profile=mcp-app"
     },
     async () => {
       const html = await fs.readFile(path.join(DIST_DIR, "client/mcp-app.html"), "utf-8");
