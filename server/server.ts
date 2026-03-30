@@ -408,6 +408,7 @@ export function createServer() {
                     "https://c.basemaps.cartocdn.com",
                     "https://d.basemaps.cartocdn.com",
                     "https://mapsref.brgm.fr",
+                    "https://www.georisques.gouv.fr"
                   ],
                 },
               },
