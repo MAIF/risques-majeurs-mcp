@@ -66,137 +66,6 @@ export const RISQUES = [
   },
   
 
-  //========== RISQUE - Installations classées pour la protection de l'environnement (ICPE) ==========//
-  
-  {
-    code: 'icpe',
-    libelle: 'Installations classées pour la protection de l\'environnement (ICPE)',
-    fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-        rayon: '5000',
-        page_size: '100'
-      });
-      const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
-      const seveso = data.data
-        .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
-      return {
-        total: seveso.length,
-        installations: seveso.map((i: any) => {
-          let seveso = 'non_seveso';
-          switch (i.statutSeveso) {
-            case 'Seveso seuil haut':
-              seveso = 'seveso_seuil_haut';
-              break;
-            case 'Seveso seuil bas':
-              seveso = 'seveso_seuil_bas';
-              break;
-          }
-          return {
-            raisonSociale: i.raisonSociale,
-            seveso,
-            longitude: i.longitude,
-            latitude: i.latitude
-          }
-        })
-      };
-    },
-    outputSchema: z
-          .object({
-            total: z
-              .number()
-              .gte(0)
-              .describe("Nombre d'installations classées Seveso à proximité"),
-            installations: z
-              .array(
-                z
-                  .object({
-                    raisonSociale: z
-                      .string()
-                      .describe("Raison sociale"),
-                    seveso: z
-                      .enum(['seveso_seuil_haut', 'seveso_seuil_bas', 'non_seveso'])
-                      .describe("Statut Seveso"),
-                    longitude: z
-                      .number()
-                      .describe("Longitude"),
-                    latitude: z
-                      .number()
-                      .describe("Latitude"),
-                  })
-              )
-              .describe("Liste des installation classées Seveso à proximité")
-          })
-          .optional()
-          .describe("Exposition au risque installations classées Seveso"),
-    text: (exposition: any) => {
-      let result = `${exposition.total} installations classées pour la protection de l'environnement (ICPE) avec le statut Seveso sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
-      if (exposition.total > 0) {
-        result += ' Voici la liste des installations : ' + exposition.installations
-          .map((i: any) => `\n  - ${i.raisonSociale} (${i.seveso.replaceAll('_', ' ')})`);
-      }
-      return result;
-    },
-    layers: [
-      {
-        id: 'icpe',
-        nom: 'ICPE',
-        source: (exposition: any) => {
-          return {
-            type: 'geojson',
-            data: {
-              type: 'FeatureCollection',
-              features: exposition.installations.map((i: any) => {
-                let description = i.raisonSociale;
-                let color = '#000000';
-                switch (i.seveso) {
-                  case 'seveso_seuil_haut':
-                    description += ' (Seveso seuil haut)';
-                    color = '#fc0d1a';
-                    break;
-                  case 'seveso_seuil_bas':
-                    description += ' (Seveso seuil bas)';
-                    color = '#2e404f';
-                    break;
-                  default:
-                    description += ' (Non Seveso)';
-                    break;
-                }
-                return {
-                  type: 'Feature',
-                  properties: {
-                    raisonSociale: i.raisonSociale,
-                    seveso: i.seveso,
-                    description,
-                    color
-                  },
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [i.longitude, i.latitude]
-                  }
-                };
-              })
-            },
-            maxzoom: 16,
-            attribution: 'Ministère de la Transition Écologique'
-          };
-        },
-        layer: {
-          'type': 'circle',
-          'paint': {
-            'circle-color': ['get', 'color']
-          }
-        },
-        legend: (exposition: any) : Node => makeLegends([
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
-        ])
-      }
-    ]
-  },
-  
-
   //========== RISQUE - Mouvements de terrain ==========//
 
   {
@@ -206,7 +75,7 @@ export const RISQUES = [
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
         rayon: '5000',
-        page_size: '100'
+        page_size: '1000'
       });
       const data: any = await callGeorisqueAPI('api/v1/mvt', params, { data: [] });
       return {
@@ -298,7 +167,7 @@ export const RISQUES = [
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
         rayon: '5000',
-        page_size: '100'
+        page_size: '1000'
       });
       const data: any = await callGeorisqueAPI('api/v1/cavites', params, { data: [] });
       return {
@@ -384,7 +253,7 @@ export const RISQUES = [
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
         rayon: '5000',
-        page_size: '100'
+        page_size: '1000'
       });
       const dataTri: any = await callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] });
       const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
@@ -634,6 +503,315 @@ export const RISQUES = [
           [ makeSquareSvg({ fillOpacity: 1, fillColor: '#e00000', strokeColor: '#e00000', strokeWidth: 1 })!, 'Interdiction stricte'],
           [ makeSquareSvg({ fillOpacity: 1, fillColor: '#c993ff', strokeColor: '#c993ff', strokeWidth: 1 })!, 'Délaissement possible'],
           [ makeSquareSvg({ fillOpacity: 1, fillColor: '#9a359b', strokeColor: '#9a359b', strokeWidth: 1 })!, 'Expropriation possible']
+        ])
+      }
+    ]
+  },
+  
+
+  //========== RISQUE - Catastrophes naturelles (CatNat) ==========//
+
+  {
+    code: 'catnat',
+    libelle: 'Catastrophes naturelles (CatNat)',
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+        rayon: '5000',
+        page_size: '1000'
+      });
+      const data: any = await callGeorisqueAPI('api/v1/gaspar/catnat', params, { data: [] });
+      return {
+        total: data.data.length,
+        catnat: data.data
+          .sort((a: any, b: any) => parse(b.date_debut_evt, 'DD/MM/YYYY').getTime() - parse(a.date_debut_evt, 'DD/MM/YYYY').getTime())
+          .map((c: any) => {
+            return {
+              type: c.libelle_risque_jo,
+              code_insee: c.code_insee,
+              commune: c.libelle_commune,
+              date: c.date_debut_evt && format(parse(c.date_debut_evt, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            }
+          })
+      };
+    },
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre de catastrophes naturelles à proximité"),
+            catnat: z
+              .array(
+                z
+                  .object({
+                    type: z
+                      .string()
+                      .describe("Type de catastrophe naturelle / Risque associé"),
+                    code_insee: z
+                      .string()
+                      .describe("Code INSEE de la commune concernée"),
+                    commune: z
+                      .string()
+                      .describe("Nom de la commune concernée"),
+                    date: z
+                      .iso.date()
+                      .nullable()
+                      .optional()
+                      .describe("Date de début de l'événement"),
+                  })
+              )
+              .describe("Liste des catastrophes naturelles à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque catastrophes naturelles"),
+    text: (exposition: any) => {
+      let result = `${exposition.total} catastrophes naturelles sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.total > 0) {
+        result += ' Voici la liste des catastrophes naturelles : ' + exposition.catnat
+          .map((c: any) => `\n  - ${c.type}${c.date ? ' le ' + format(parse(c.date, 'YYYY-MM-DD'), 'DD/MM/YYYY') : ''}${c.commune ? ' sur la commune de ' + c.commune : ''}`);
+      }
+      return result;
+    },
+    layers: []
+  },
+  
+
+  //========== RISQUE - Installations classées pour la protection de l'environnement (ICPE) ==========//
+  
+  {
+    code: 'icpe',
+    libelle: 'Installations classées pour la protection de l\'environnement (ICPE)',
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+        rayon: '5000',
+        page_size: '1000'
+      });
+      const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
+      const seveso = data.data
+        .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
+      return {
+        total: seveso.length,
+        installations: seveso.map((i: any) => {
+          let seveso = 'non_seveso';
+          switch (i.statutSeveso) {
+            case 'Seveso seuil haut':
+              seveso = 'seveso_seuil_haut';
+              break;
+            case 'Seveso seuil bas':
+              seveso = 'seveso_seuil_bas';
+              break;
+          }
+          return {
+            raisonSociale: i.raisonSociale,
+            seveso,
+            longitude: i.longitude,
+            latitude: i.latitude
+          }
+        })
+      };
+    },
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre d'installations classées Seveso à proximité"),
+            installations: z
+              .array(
+                z
+                  .object({
+                    raisonSociale: z
+                      .string()
+                      .describe("Raison sociale"),
+                    seveso: z
+                      .enum(['seveso_seuil_haut', 'seveso_seuil_bas', 'non_seveso'])
+                      .describe("Statut Seveso"),
+                    longitude: z
+                      .number()
+                      .describe("Longitude"),
+                    latitude: z
+                      .number()
+                      .describe("Latitude"),
+                  })
+              )
+              .describe("Liste des installation classées Seveso à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque installations classées Seveso"),
+    text: (exposition: any) => {
+      let result = `${exposition.total} installations classées pour la protection de l'environnement (ICPE) avec le statut Seveso sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.total > 0) {
+        result += ' Voici la liste des installations : ' + exposition.installations
+          .map((i: any) => `\n  - ${i.raisonSociale} (${i.seveso.replaceAll('_', ' ')})`);
+      }
+      return result;
+    },
+    layers: [
+      {
+        id: 'icpe',
+        nom: 'ICPE',
+        source: (exposition: any) => {
+          return {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: exposition.installations.map((i: any) => {
+                let description = i.raisonSociale;
+                let color = '#000000';
+                switch (i.seveso) {
+                  case 'seveso_seuil_haut':
+                    description += ' (Seveso seuil haut)';
+                    color = '#fc0d1a';
+                    break;
+                  case 'seveso_seuil_bas':
+                    description += ' (Seveso seuil bas)';
+                    color = '#2e404f';
+                    break;
+                  default:
+                    description += ' (Non Seveso)';
+                    break;
+                }
+                return {
+                  type: 'Feature',
+                  properties: {
+                    raisonSociale: i.raisonSociale,
+                    seveso: i.seveso,
+                    description,
+                    color
+                  },
+                  geometry: {
+                    type: 'Point',
+                    coordinates: [i.longitude, i.latitude]
+                  }
+                };
+              })
+            },
+            maxzoom: 16,
+            attribution: 'Ministère de la Transition Écologique'
+          };
+        },
+        layer: {
+          'type': 'circle',
+          'paint': {
+            'circle-color': ['get', 'color']
+          }
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
+        ])
+      }
+    ]
+  },
+  
+
+  //========== RISQUE - Installations nucléaires ==========//
+  
+  {
+    code: 'installations_nucleaires',
+    libelle: 'Installations nucléaires',
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        longitude: `${longitude}`,
+        latitude: `${latitude}`
+      });
+      const data: any = await callGeorisqueAPI('api/v1/installations_nucleaires', params, []);
+      return {
+        total: data.length,
+        installations: data.map((i: any) => {
+          return {
+            nom: i.nomInstallationNucleaire,
+            type: i.typeInstallationNucleaire,
+            longitude: i.longitude,
+            latitude: i.latitude
+          }
+        })
+      };
+    },
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre d'installations nucléaires à proximité"),
+            installations: z
+              .array(
+                z
+                  .object({
+                    nom: z
+                      .string()
+                      .describe("Nom de l'installation"),
+                    type: z
+                      .string()
+                      .describe("Type d'installation"),
+                    longitude: z
+                      .number()
+                      .describe("Longitude"),
+                    latitude: z
+                      .number()
+                      .describe("Latitude"),
+                  })
+              )
+              .describe("Liste des installation nucléaires à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque installations nucléaires"),
+    text: (exposition: any) => {
+      let result = `${exposition.total} installations nucléaires sont recensées autour de l'adresse indiquée.`;
+      if (exposition.total > 0) {
+        result += ' Voici la liste des installations : ' + exposition.installations
+          .map((i: any) => `\n  - ${i.nom} (${i.type})`);
+      }
+      return result;
+    },
+    layers: [
+      {
+        id: 'installations_nucleaires',
+        nom: 'Installations nucléaires',
+        source: (exposition: any) => {
+          return {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: exposition.installations.map((i: any) => {
+                let color = '#2e404f';
+                switch (i.type) {
+                  case 'Centrales nucléaires':
+                    color = '#c62222';
+                    break;
+                  default:
+                    break;
+                }
+                return {
+                  type: 'Feature',
+                  properties: {
+                    nom: i.nom,
+                    type: i.type,
+                    color
+                  },
+                  geometry: {
+                    type: 'Point',
+                    coordinates: [i.longitude, i.latitude]
+                  }
+                };
+              })
+            },
+            maxzoom: 16,
+            attribution: 'Ministère de la Transition Écologique'
+          };
+        },
+        layer: {
+          'type': 'circle',
+          'paint': {
+            'circle-color': ['get', 'color']
+          }
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#v', strokeWidth: 1 })!, 'Centrale'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Autre installation']
         ])
       }
     ]
