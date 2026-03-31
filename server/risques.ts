@@ -21,7 +21,6 @@ export const RISQUES = [
   {
     code: 'argiles',
     libelle: 'Retrait-gonflement des argiles',
-    nom: 'Argiles',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -60,15 +59,21 @@ export const RISQUES = [
     text: (exposition: any) => {
       return `Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : ${exposition.libelle} (score de ${exposition.score} sur 3})`;
     },
-    source: (exposition: any) => makeRasterGeorisqueSource('ALEARG'),
-    layer: {
-      type: 'raster'
-    },
-    legend: (exposition: any) : Node => makeLegends([
-      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#ef7070', strokeColor: '#ef7070', strokeWidth: 1 })!, 'Exposition forte'],
-      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#efc270', strokeColor: '#efc270', strokeWidth: 1 })!, 'Exposition moyenne'],
-      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#f0f0bd', strokeColor: '#f0f0bd', strokeWidth: 1 })!, 'Exposition faible']
-    ])
+    layers: [
+      {
+        id: 'argiles',
+        nom: 'Argiles',
+        source: (exposition: any) => makeRasterGeorisqueSource('ALEARG'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#ef7070', strokeColor: '#ef7070', strokeWidth: 1 })!, 'Exposition forte'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#efc270', strokeColor: '#efc270', strokeWidth: 1 })!, 'Exposition moyenne'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#f0f0bd', strokeColor: '#f0f0bd', strokeWidth: 1 })!, 'Exposition faible']
+        ])
+      }
+    ]
   },
   
 
@@ -77,7 +82,6 @@ export const RISQUES = [
   {
     code: 'icpe',
     libelle: 'Installations classées pour la protection de l\'environnement (ICPE)',
-    nom: 'ICPE',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -150,62 +154,68 @@ export const RISQUES = [
     text: (exposition: any) => {
       let result = `${exposition.total} installations classées pour la protection de l'environnement (ICPE) avec le statut Seveso sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
-        result += 'Voici la liste des installations : ' + exposition.installations
+        result += ' Voici la liste des installations : ' + exposition.installations
           .map((i: any) => `\n  - ${i.raisonSociale} (${i.seveso.replaceAll('_', ' ')})`);
       }
       return result;
     },
-    source: (exposition: any) => {
-      return {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: exposition.installations.map((i: any) => {
-            let description = i.raisonSociale;
-            let color = '#000000';
-            switch (i.seveso) {
-              case 'seveso_seuil_haut':
-                description += ' (Seveso seuil haut)';
-                color = '#fc0d1a';
-                break;
-              case 'seveso_seuil_bas':
-                description += ' (Seveso seuil bas)';
-                color = '#2e404f';
-                break;
-              default:
-                description += ' (Non Seveso)';
-                break;
-            }
-            return {
-              type: 'Feature',
-              properties: {
-                raisonSociale: i.raisonSociale,
-                seveso: i.seveso,
-                description,
-                color
-              },
-              geometry: {
-                type: 'Point',
-                coordinates: [i.longitude, i.latitude]
-              }
-            };
-          })
+    layers: [
+      {
+        id: 'icpe',
+        nom: 'ICPE',
+        source: (exposition: any) => {
+          return {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: exposition.installations.map((i: any) => {
+                let description = i.raisonSociale;
+                let color = '#000000';
+                switch (i.seveso) {
+                  case 'seveso_seuil_haut':
+                    description += ' (Seveso seuil haut)';
+                    color = '#fc0d1a';
+                    break;
+                  case 'seveso_seuil_bas':
+                    description += ' (Seveso seuil bas)';
+                    color = '#2e404f';
+                    break;
+                  default:
+                    description += ' (Non Seveso)';
+                    break;
+                }
+                return {
+                  type: 'Feature',
+                  properties: {
+                    raisonSociale: i.raisonSociale,
+                    seveso: i.seveso,
+                    description,
+                    color
+                  },
+                  geometry: {
+                    type: 'Point',
+                    coordinates: [i.longitude, i.latitude]
+                  }
+                };
+              })
+            },
+            maxzoom: 16,
+            attribution: 'Ministère de la Transition Écologique'
+          };
         },
-        maxzoom: 16,
-        attribution: 'Ministère de la Transition Écologique'
-      };
-    },
-    layer: {
-      'type': 'circle',
-      'paint': {
-        'circle-color': ['get', 'color']
+        layer: {
+          'type': 'circle',
+          'paint': {
+            'circle-color': ['get', 'color']
+          }
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
+        ])
       }
-    },
-    legend: (exposition: any) : Node => makeLegends([
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
-    ])
+    ]
   },
   
 
@@ -214,7 +224,6 @@ export const RISQUES = [
   {
     code: 'mouvement_terrain',
     libelle: 'Mouvements de terrain',
-    nom: 'Mouvements de terrain',
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -288,35 +297,133 @@ export const RISQUES = [
     text: (exposition: any) => {
       let result = `${exposition.total} mouvements de terrain sont recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
-        result += 'Voici la liste des mouvements de terrain : ' + exposition.mouvements
+        result += ' Voici la liste des mouvements de terrain : ' + exposition.mouvements
           .map((m: any) => `\n  - ${m.type} au lieu ${m.lieu}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${m.date ? ' le ' + format(parse(m.date, 'YYYY-MM-DD'), 'DD/MM/YYYY') : ''}`);
       }
       return result;
     },
-    source: (exposition: any) => makeRasterGeorisqueSource('CAVITE_LOCALISEE'),
-    layer: {
-      type: 'raster'
+    layers: [
+      {
+        id: 'mouvement_terrain',
+        nom: 'Mouvements de terrain',
+        source: (exposition: any) => makeRasterGeorisqueSource('MVT_LOCALISE'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#f28694', strokeColor: '#f28694', strokeWidth: 1 })!, 'Glissement'],
+          [ makeDiamondSvg({ fillOpacity: 1, fillColor: '#92fa9f', strokeColor: '#92fa9f', strokeWidth: 1 })!, 'Éboulement'],
+          [ makeTriangleDownSvg({ fillOpacity: 1, fillColor: '#f5f9a0', strokeColor: '#f5f9a0', strokeWidth: 1 })!, 'Coulée'],
+          [ makeStarSvg({ fillOpacity: 1, fillColor: '#8a8dff', strokeColor: '#8a8dff', strokeWidth: 1 })!, 'Effondrement'],
+          [ makeTriangleUpSvg({ fillOpacity: 1, fillColor: '#f287ff', strokeColor: '#f287ff', strokeWidth: 1 })!, 'Érosion des berges']
+        ])
+      }
+    ]
+  },
+  
+
+  //========== RISQUE - Cavités ==========//
+
+  {
+    code: 'cavites',
+    libelle: 'Cavités',
+    fetch: async (longitude: number, latitude: number) => {
+      const params = new URLSearchParams({
+        latlon: `${longitude},${latitude}`,
+        rayon: '5000',
+        page_size: '100'
+      });
+      const url = `https://georisques.gouv.fr/api/v1/cavites?${params}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'cavites' : ${response.status} ${response.statusText}`);
+      }
+      let data: any = {
+        data: []
+      };
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      }
+      return {
+        total: data.data.length,
+        cavites: data.data.map((c: any) => {
+          return {
+            type: c.type,
+            nom: c.nom,
+            longitude: c.longitude,
+            latitude: c.latitude
+          }
+        })
+      };
     },
-    legend: (exposition: any) : Node => makeLegends([
-      [ makeSquareSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Cave'],
-      [ makeDiamondSvg({ fillOpacity: 1, fillColor: '#87de4d', strokeColor: '#87de4d', strokeWidth: 1 })!, 'Carrière'],
-      [ makeTriangleDownSvg({ fillOpacity: 1, fillColor: '#f5f515', strokeColor: '#f5f515', strokeWidth: 1 })!, 'Naturelle'],
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#ffffff', strokeColor: '#ff0000', strokeWidth: 5 })!, 'Indéterminée'],
-      [ makeTriangleUpSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Galerie'],
-      [ makeStarSvg({ fillOpacity: 1, fillColor: '#0100ff', strokeColor: '#0100ff', strokeWidth: 1 })!, 'Ouvrage civil'],
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#660066', strokeColor: '#660066', strokeWidth: 1 })!, 'Ouvrage militaire'],
-      [ makeStarSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Puits'],
-      [ makeCircleSvg({ fillOpacity: 1, fillColor: '#6600ff', strokeColor: '#6600ff', strokeWidth: 1 })!, 'Souterrain']
-    ])
+    outputSchema: z
+          .object({
+            total: z
+              .number()
+              .gte(0)
+              .describe("Nombre de cavités à proximité"),
+            cavites: z
+              .array(
+                z
+                  .object({
+                    type: z
+                      .string()
+                      .describe("Type de cavité"),
+                    nom: z
+                      .string()
+                      .describe("Nom"),
+                    longitude: z
+                      .number()
+                      .describe("Longitude"),
+                    latitude: z
+                      .number()
+                      .describe("Latitude"),
+                  })
+              )
+              .describe("Liste des cavités à proximité")
+          })
+          .optional()
+          .describe("Exposition au risque cavités"),
+    text: (exposition: any) => {
+      let result = `${exposition.total} cavités sont recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.total > 0) {
+        const byType = Object.groupBy(exposition.cavites, (c: any) => c.type);
+        result += Object.keys(byType).map(t => `\nCavités de type "${t}" : ` + byType[t]!
+          .map((c: any) => `\n  - ${c.nom}`)
+        );
+      }
+      return result;
+    },
+    layers: [
+      {
+        id: 'cavites',
+        nom: 'Cavités',
+        source: (exposition: any) => makeRasterGeorisqueSource('CAVITE_LOCALISEE'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Cave'],
+          [ makeDiamondSvg({ fillOpacity: 1, fillColor: '#87de4d', strokeColor: '#87de4d', strokeWidth: 1 })!, 'Carrière'],
+          [ makeTriangleDownSvg({ fillOpacity: 1, fillColor: '#f5f515', strokeColor: '#f5f515', strokeWidth: 1 })!, 'Naturelle'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#ffffff', strokeColor: '#ff0000', strokeWidth: 5 })!, 'Indéterminée'],
+          [ makeTriangleUpSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Galerie'],
+          [ makeStarSvg({ fillOpacity: 1, fillColor: '#0100ff', strokeColor: '#0100ff', strokeWidth: 1 })!, 'Ouvrage civil'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#660066', strokeColor: '#660066', strokeWidth: 1 })!, 'Ouvrage militaire'],
+          [ makeStarSvg({ fillOpacity: 1, fillColor: '#5fe2fa', strokeColor: '#5fe2fa', strokeWidth: 1 })!, 'Puits'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#6600ff', strokeColor: '#6600ff', strokeWidth: 1 })!, 'Souterrain']
+        ])
+      }
+    ]
   },
   
 
   //========== RISQUE - Territoires à Risques importants d'Inondation (TRI) ==========//
 
   {
-    code: 'tri',
-    libelle: "Territoires à Risques importants d'Inondation (TRI)",
-    nom: 'Inondations',
+    code: 'inondations',
+    libelle: "Inondations",
     fetch: async (longitude: number, latitude: number) => {
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
@@ -336,69 +443,86 @@ export const RISQUES = [
         data = await response.json();
       }
       return {
-        total: data.data.length,
-        zones: data.data.map((z: any) => {
-          return {
-            libelle: z.libelle_tri,
-            risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
-            code_insee: z.code_insee,
-            commune: z.libelle_commune,
-            date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
-          }
-        })
+        tri: {
+          total: data.data.length,
+          zones: data.data.map((z: any) => {
+            return {
+              libelle: z.libelle_tri,
+              risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+              code_insee: z.code_insee,
+              commune: z.libelle_commune,
+              date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            }
+          })
+        }
+        // TODO azi, papi, pprn
       };
     },
     outputSchema: z
           .object({
-            total: z
-              .number()
-              .gte(0)
-              .describe("Nombre de zones à risque à proximité"),
-            zones: z
-              .array(
-                z
-                  .object({
-                    libelle: z
-                      .string()
-                      .describe("Libellé de la zone à risque"),
-                    risques: z
-                      .array(
-                        z
+            tri: z
+              .object({
+                total: z
+                  .number()
+                  .gte(0)
+                  .describe("Nombre de zones à risque à proximité"),
+                zones: z
+                  .array(
+                    z
+                      .object({
+                        libelle: z
                           .string()
-                      )
-                      .describe("Liste des risques"),
-                    code_insee: z
-                      .string()
-                      .describe("Code INSEE de la commune concernée"),
-                    commune: z
-                      .string()
-                      .describe("Nom de la commune concernée"),
-                    date: z
-                      .iso.date()
-                      .nullable()
-                      .optional()
-                      .describe("Date d'arrêté")
-                  })
-              )
-              .describe("Liste des zones à risque à proximité")
+                          .describe("Libellé de la zone à risque"),
+                        risques: z
+                          .array(
+                            z
+                              .string()
+                          )
+                          .describe("Liste des risques"),
+                        code_insee: z
+                          .string()
+                          .describe("Code INSEE de la commune concernée"),
+                        commune: z
+                          .string()
+                          .describe("Nom de la commune concernée"),
+                        date: z
+                          .iso.date()
+                          .nullable()
+                          .optional()
+                          .describe("Date d'arrêté")
+                      })
+                  )
+                  .describe("Liste des zones à risque à proximité")
+              })
+              .optional()
+              .describe("Territoires à Risques importants d'Inondation (TRI)")
+            // TODO azi, papi, pprn
           })
           .optional()
           .describe("Exposition au risque inondation"),
     text: (exposition: any) => {
-      let result = `${exposition.total} zones à risque d'inondation recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
-      if (exposition.total > 0) {
-        result += 'Voici la liste des zones et des risques concernés : ' + exposition.zones
+      let result = `${exposition.tri.total} zones à risque d'inondation recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.tri.total > 0) {
+        result += ' Voici la liste des zones et des risques concernés : ' + exposition.tri.zones
           .map((z: any) => `\n  - ${z.libelle} exposée aux risques ${z.risques.join(', ')}${z.commune ? ' sur la commune de ' + z.commune : ''}`);
       }
+      // TODO azi, papi, pprn
       return result;
     },
-    source: (exposition: any) => makeRasterGeorisqueSource('LIMITETRI_FXX'),
-    layer: {
-      type: 'raster'
-    },
-    legend: (exposition: any) : Node => makeLegends([
-      [ makeLineSvg({ fillOpacity: 1, fillColor: '#e53075', strokeColor: '#e53075', strokeWidth: 15 })!, 'Périmètre de TRI']
-    ])
+    layers: [
+      {
+        id: 'tri',
+        nom: 'TRI',
+        source: (exposition: any) => makeRasterGeorisqueSource('LIMITETRI_FXX'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeLineSvg({ fillOpacity: 1, fillColor: '#e53075', strokeColor: '#e53075', strokeWidth: 15 })!, 'Périmètre de TRI']
+        ])
+      }
+      // TODO pprn
+    ]
   },
 
 ];

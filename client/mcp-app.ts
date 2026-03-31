@@ -81,27 +81,28 @@ app.ontoolresult = (result: any) => {
             // Data layers
             let activeRisks: any[] = RISQUES
                 .filter(r => {
-                    console.log('Risque: ' + r.code);
                     const exposition = result.structuredContent.exposition.risques[r.code];
                     console.log(exposition);
                     return exposition;
                 });
             let layers: any[] = activeRisks
-                .map(r => {
+                .flatMap(r => {
                     const exposition = result.structuredContent.exposition.risques[r.code];
-                    const source: any = r.source(exposition);
-                    console.log(source);
-                    map.addSource(r.code, source);
-                    map.addLayer({
-                        ...r.layer,
-                        id: r.code,
-                        source: r.code
+                    return r.layers.map((l: any) => {
+                        const source: any = l.source(exposition);
+                        console.log(source);
+                        map.addSource(l.id, source);
+                        map.addLayer({
+                            ...l.layer,
+                            id: l.id,
+                            source: l.id
+                        });
+                        return {
+                            id: l.id,
+                            label: l.nom,
+                            legend: l.legend(exposition)
+                        };
                     });
-                    return {
-                        id: r.code,
-                        label: r.nom,
-                        legend: r.legend(exposition)
-                    };
                 });
 
             // Create control

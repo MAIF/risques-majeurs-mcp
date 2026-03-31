@@ -161,7 +161,13 @@ export function createServer() {
                     .describe("Code du risque"),
                   libelle: z
                     .string()
-                    .describe("Libellé du risque")
+                    .describe("Libellé du risque"),
+                  exposition: z
+                    .boolean()
+                    .describe("Disponible dans l'outil exposition"),
+                  carte: z
+                    .boolean()
+                    .describe("Disponible sur la carte des risques")
                 })
             )
             .optional()
@@ -183,7 +189,9 @@ export function createServer() {
       const risques = RISQUES.map((r: any) => {
         return {
            code: r.code,
-           libelle: r.libelle
+           libelle: r.libelle,
+           exposition: typeof r.fetch !== 'undefined',
+           carte: r.layers.length > 0
         };
       });
       return {
@@ -200,6 +208,9 @@ export function createServer() {
 
 
   //========== TOOL - exposition_risques ==========//
+
+  const risquesExposition = RISQUES
+    .filter((r: any) => typeof r.fetch !== 'undefined');
 
   server.registerTool(
     "exposition_risques",
@@ -220,10 +231,10 @@ export function createServer() {
         risques: z
           .array(
             z
-              .enum(RISQUES.map((r: any) => r.code))
+              .enum(risquesExposition.map((r: any) => r.code))
           )
           .optional()
-          .default(RISQUES.map((r: any) => r.code))
+          .default(risquesExposition.map((r: any) => r.code))
           .describe('Liste de codes des risques à évaluer')
       },
       annotations: {
@@ -236,7 +247,7 @@ export function createServer() {
     async ({ longitude, latitude, risques }) => {
       console.log(`Outil 'exposition_risques' : ${longitude},${latitude} / ${risques}`);
       try {
-        const expositions = await Promise.all(RISQUES
+        const expositions = await Promise.all(risquesExposition
           .filter((r: any) => risques.length === 0 || risques.includes(r.code))
           .map(async (r: any) => {
             const exposition = await r.fetch(longitude, latitude);
@@ -275,6 +286,9 @@ export function createServer() {
 
   const appCarteExpositionRisquesResourceUri = "ui://app-carte-exposition-risques/mcp-app.html";
 
+  const risquesCarte = RISQUES
+    .filter((r: any) => r.layers.length > 0);
+
   server.registerTool(
     "carte_exposition_risques",
     {
@@ -294,10 +308,10 @@ export function createServer() {
         risques: z
           .array(
             z
-              .enum(RISQUES.map((r: any) => r.code))
+              .enum(risquesCarte.map((r: any) => r.code))
           )
           .optional()
-          .default(RISQUES.map((r: any) => r.code))
+          .default(risquesCarte.map((r: any) => r.code))
           .describe('Liste de codes des risques à afficher')
       },
       outputSchema: z
@@ -306,7 +320,7 @@ export function createServer() {
             .object({
               risques: z
                 .object(Object.fromEntries(
-                  RISQUES.map((r: any) => [r.code, r.outputSchema])
+                  risquesCarte.map((r: any) => [r.code, r.outputSchema])
                 ))
                 .describe('Exposition par risque'),
               longitude: z
@@ -344,7 +358,7 @@ export function createServer() {
     async ({ longitude, latitude, risques }) => {
       console.log(`Outil 'carte_exposition_risques' : ${longitude},${latitude} / ${risques}`);
       try {
-        const expositions = await Promise.all(RISQUES
+        const expositions = await Promise.all(risquesCarte
           .filter((r: any) => risques.length === 0 || risques.includes(r.code))
           .map(async (r: any) => {
             const exposition = await r.fetch(longitude, latitude);
