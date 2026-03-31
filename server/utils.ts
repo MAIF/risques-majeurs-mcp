@@ -1,3 +1,17 @@
+export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any) => {
+  const url = `https://georisques.gouv.fr/${path}?${params}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Erreur lors de l'appel à l'API Géorisques '${path}' : ${response.status} ${response.statusText}`);
+  }
+  let data = defaultPayload;
+  const contentType = response.headers.get("Content-Type");
+  if (contentType && contentType.includes("application/json")) {
+    data = await response.json();
+  }
+  return data;
+}
+
 export const makeRasterGeorisqueSource = (layerName: string) => {
   return {
     type: 'raster',

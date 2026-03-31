@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { format, parse } from 'date-and-time';
 import {
+  callGeorisqueAPI,
   makeRasterGeorisqueSource,
   makeCircleSvg,
   makeSquareSvg,
@@ -25,19 +26,7 @@ export const RISQUES = [
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
       });
-      const url = `https://georisques.gouv.fr/api/v1/rga?${params}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'rga' : ${response.status} ${response.statusText}`);
-      }
-      let data = {
-        exposition: 'Non exposé',
-        codeExposition: "0"
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
+      const data: any = await callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" });
       return {
         libelle: data.exposition,
         score: parseInt(data.codeExposition)
@@ -88,18 +77,7 @@ export const RISQUES = [
         rayon: '5000',
         page_size: '100'
       });
-      const url = `https://georisques.gouv.fr/api/v1/installations_classees?${params}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'installations_classees' : ${response.status} ${response.statusText}`);
-      }
-      let data: any = {
-        data: []
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
+      const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
       const seveso = data.data
         .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
       return {
@@ -230,18 +208,7 @@ export const RISQUES = [
         rayon: '5000',
         page_size: '100'
       });
-      const url = `https://georisques.gouv.fr/api/v1/mvt?${params}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'mvt' : ${response.status} ${response.statusText}`);
-      }
-      let data: any = {
-        data: []
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
+      const data: any = await callGeorisqueAPI('api/v1/mvt', params, { data: [] });
       return {
         total: data.data.length,
         mouvements: data.data.map((m: any) => {
@@ -333,18 +300,7 @@ export const RISQUES = [
         rayon: '5000',
         page_size: '100'
       });
-      const url = `https://georisques.gouv.fr/api/v1/cavites?${params}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'cavites' : ${response.status} ${response.statusText}`);
-      }
-      let data: any = {
-        data: []
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
+      const data: any = await callGeorisqueAPI('api/v1/cavites', params, { data: [] });
       return {
         total: data.data.length,
         cavites: data.data.map((c: any) => {
@@ -430,22 +386,16 @@ export const RISQUES = [
         rayon: '5000',
         page_size: '100'
       });
-      const url = `https://georisques.gouv.fr/api/v1/gaspar/tri?${params}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'appel à l'API Géorisques 'tri' : ${response.status} ${response.statusText}`);
-      }
-      let data: any = {
-        data: []
-      };
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
+      const dataTri: any = await callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] });
+      const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
+      const dataPapi: any = await callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] });
+      const dataPpr: any = await callGeorisqueAPI('api/v1/ppr', params, { data: [] });
+      const filteredPpr = dataPpr.data
+        .filter((p: any) => p.risque.code_risque === '11'); // Inondation
       return {
         tri: {
-          total: data.data.length,
-          zones: data.data.map((z: any) => {
+          total: dataTri.data.length,
+          zones: dataTri.data.map((z: any) => {
             return {
               libelle: z.libelle_tri,
               risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
@@ -454,8 +404,42 @@ export const RISQUES = [
               date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
             }
           })
+        },
+        azi: {
+          total: dataAzi.data.length,
+          zones: dataAzi.data.map((z: any) => {
+            return {
+              libelle: z.libelle_azi,
+              risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+              code_insee: z.code_insee,
+              commune: z.libelle_commune,
+              date: z.date_debut_information && format(parse(z.date_debut_information, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            }
+          })
+        },
+        papi: {
+          total: dataPapi.data.length,
+          programmes: dataPapi.data.map((p: any) => {
+            return {
+              libelle: p.libelle_papi,
+              risques: p.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+              code_insee: p.code_insee,
+              commune: p.libelle_commune,
+              date: p.date_labellisation && format(parse(p.date_labellisation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            }
+          })
+        },
+        ppr: {
+          total: filteredPpr.length,
+          plans: filteredPpr.map((p: any) => {
+            return {
+              libelle: p.nom_ppr,
+              risque: p.risque.libelle_risque,
+              commune: p.libelle_commune,
+              date: p.date_approbation && format(parse(p.date_approbation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+            }
+          })
         }
-        // TODO azi, papi, pprn
       };
     },
     outputSchema: z
@@ -495,8 +479,109 @@ export const RISQUES = [
                   .describe("Liste des zones à risque à proximité")
               })
               .optional()
-              .describe("Territoires à Risques importants d'Inondation (TRI)")
-            // TODO azi, papi, pprn
+              .describe("Territoires à Risques importants d'Inondation (TRI)"),
+            azi: z
+              .object({
+                total: z
+                  .number()
+                  .gte(0)
+                  .describe("Nombre de zones inondables"),
+                zones: z
+                  .array(
+                    z
+                      .object({
+                        libelle: z
+                          .string()
+                          .describe("Libellé de la zone inondable"),
+                        risques: z
+                          .array(
+                            z
+                              .string()
+                          )
+                          .describe("Liste des risques"),
+                        code_insee: z
+                          .string()
+                          .describe("Code INSEE de la commune concernée"),
+                        commune: z
+                          .string()
+                          .describe("Nom de la commune concernée"),
+                        date: z
+                          .iso.date()
+                          .nullable()
+                          .optional()
+                          .describe("Date de publication")
+                      })
+                  )
+                  .describe("Liste des zones inondables à proximité")
+              })
+              .optional()
+              .describe("Atlas de Zones Inondables (AZI)"),
+            papi: z
+              .object({
+                total: z
+                  .number()
+                  .gte(0)
+                  .describe("Nombre de programmes"),
+                programmes: z
+                  .array(
+                    z
+                      .object({
+                        libelle: z
+                          .string()
+                          .describe("Libellé du programme"),
+                        risques: z
+                          .array(
+                            z
+                              .string()
+                          )
+                          .describe("Liste des risques"),
+                        code_insee: z
+                          .string()
+                          .describe("Code INSEE de la commune concernée"),
+                        commune: z
+                          .string()
+                          .describe("Nom de la commune concernée"),
+                        date: z
+                          .iso.date()
+                          .nullable()
+                          .optional()
+                          .describe("Date de labellisation")
+                      })
+                  )
+                  .describe("Liste des programmes à proximité")
+              })
+              .optional()
+              .describe("Programmes d'Actions de Prévention des Inondations (PAPI)"),
+            ppr: z
+              .object({
+                total: z
+                  .number()
+                  .gte(0)
+                  .describe("Nombre de plans de prévention"),
+                plans: z
+                  .array(
+                    z
+                      .object({
+                        libelle: z
+                          .string()
+                          .describe("Libellé du plans de prévention"),
+                        risque: z
+                          .string()
+                          .describe("Risque"),
+                        commune: z
+                          .string()
+                          .describe("Nom de la commune concernée"),
+                        date: z
+                          .iso.date()
+                          .nullable()
+                          .optional()
+                          .describe("Date d'approbation")
+                      })
+                  )
+                  .describe("Liste des plans de prévention à proximité")
+              })
+              .optional()
+              .describe("Plans de Prévention des Risques Naturels (PPRN)")
           })
           .optional()
           .describe("Exposition au risque inondation"),
@@ -506,7 +591,21 @@ export const RISQUES = [
         result += ' Voici la liste des zones et des risques concernés : ' + exposition.tri.zones
           .map((z: any) => `\n  - ${z.libelle} exposée aux risques ${z.risques.join(', ')}${z.commune ? ' sur la commune de ' + z.commune : ''}`);
       }
-      // TODO azi, papi, pprn
+      result += `\n\n${exposition.azi.total} zones inondables recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.azi.total > 0) {
+        result += ' Voici la liste des zones et des risques concernés : ' + exposition.azi.zones
+          .map((z: any) => `\n  - ${z.libelle} exposée aux risques ${z.risques.join(', ')}${z.commune ? ' sur la commune de ' + z.commune : ''}`);
+      }
+      result += `\n\n${exposition.papi.total} programmes d'action de prévention des inondations recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.papi.total > 0) {
+        result += ' Voici la liste des programmes et des risques concernés : ' + exposition.papi.programmes
+          .map((p: any) => `\n  - ${p.libelle} concernant les risques ${p.risques.join(', ')}${p.commune ? ' sur la commune de ' + p.commune : ''}`);
+      }
+      result += `\n\n${exposition.ppr.total} plans de prévention des inondations recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée.`;
+      if (exposition.ppr.total > 0) {
+        result += ' Voici la liste des plans de prévention et des risques concernés : ' + exposition.ppr.plans
+          .map((p: any) => `\n  - ${p.libelle} concernant le risque ${p.risque}${p.commune ? ' sur la commune de ' + p.commune : ''}`);
+      }
       return result;
     },
     layers: [
@@ -520,8 +619,23 @@ export const RISQUES = [
         legend: (exposition: any) : Node => makeLegends([
           [ makeLineSvg({ fillOpacity: 1, fillColor: '#e53075', strokeColor: '#e53075', strokeWidth: 15 })!, 'Périmètre de TRI']
         ])
+      },
+      {
+        id: 'pprn',
+        nom: 'PPR Inondation',
+        source: (exposition: any) => makeRasterGeorisqueSource('PPRN_INOND'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#89d9e7', strokeColor: '#89d9e7', strokeWidth: 1 })!, 'Prescriptions hors zone d\'aléa'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#0000ff', strokeColor: '#0000ff', strokeWidth: 1 })!, 'Prescriptions'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#ff6060', strokeColor: '#ff6060', strokeWidth: 1 })!, 'Interdiction'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#e00000', strokeColor: '#e00000', strokeWidth: 1 })!, 'Interdiction stricte'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#c993ff', strokeColor: '#c993ff', strokeWidth: 1 })!, 'Délaissement possible'],
+          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#9a359b', strokeColor: '#9a359b', strokeWidth: 1 })!, 'Expropriation possible']
+        ])
       }
-      // TODO pprn
     ]
   },
 
