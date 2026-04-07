@@ -51,7 +51,7 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/MAIF/risques-majeurs-mcp/tree/main/manual/',
+          editUrl: 'https://github.com/MAIF/risques-majeurs-mcp/tree/main/documentation/',
         },
         blog: false,
         theme: {

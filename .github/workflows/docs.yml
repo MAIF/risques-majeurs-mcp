@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'manual/**'
+      - 'documentation/**'
   workflow_dispatch:
 
 permissions:
@@ -26,17 +26,17 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: manual/package-lock.json
+          cache-dependency-path: documentation/package-lock.json
 
       - run: npm ci
-        working-directory: manual
+        working-directory: documentation
 
       - run: npm run build
-        working-directory: manual
+        working-directory: documentation
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: manual/build
+          path: documentation/build
 
   deploy:
     needs: build

@@ -34,11 +34,11 @@ echo "Release v$VERSION ready. Run 'git push && git push --tags' to publish."
 
 [tasks."docs:dev"]
 description = "Start documentation site in development mode"
-run = "cd manual && npm install && npm start"
+run = "cd documentation && npm install && npm start"
 
 [tasks."docs:build"]
 description = "Build documentation and copy output to /docs for GitHub Pages"
-run = "cd manual && npm install && npm run build && rm -rf ../docs && cp -r build ../docs"
+run = "cd documentation && npm install && npm run build && rm -rf ../docs && cp -r build ../docs"
 
 [tasks.start]
 description = "Start server in production mode (watch)"
