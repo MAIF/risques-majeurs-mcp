@@ -1,0 +1,101 @@
+---
+sidebar_position: 2
+title: Demarrage rapide
+description: Installer et lancer le serveur Risques Majeurs MCP en quelques minutes
+---
+
+# Demarrage rapide
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) >= 24 (ou utilisez [mise](https://mise.jdx.dev/) pour installer la bonne version automatiquement)
+
+## Installation
+
+```bash
+npm install
+```
+
+Ou avec mise :
+
+```bash
+mise run install
+```
+
+## Lancer le serveur
+
+### En mode developpement
+
+```bash
+npm run start-dev
+```
+
+Ou avec mise :
+
+```bash
+mise run dev
+```
+
+Le serveur demarre sur `http://localhost:3000/mcp` avec hot-reload du code serveur et du client.
+
+### En mode production
+
+```bash
+npm run build
+npm start
+```
+
+Ou avec mise :
+
+```bash
+mise run start
+```
+
+## Configurer un client MCP
+
+Une fois le serveur lance, ajoutez-le dans la configuration de votre client MCP.
+
+### Claude Desktop
+
+Editez le fichier de configuration de Claude Desktop et ajoutez :
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+### Claude Code
+
+Ajoutez le serveur avec la commande :
+
+```bash
+claude mcp add risques-majeurs http://localhost:3000/mcp
+```
+
+### Autres clients MCP
+
+Tout client compatible avec le transport **Streamable HTTP** du protocole MCP peut se connecter a l'URL `http://localhost:3000/mcp`.
+
+## Verifier que ca fonctionne
+
+Une fois connecte, votre assistant IA devrait avoir acces a 4 nouveaux outils :
+
+- **geocodage** — Geocoder une adresse
+- **liste_risques** — Lister les risques disponibles
+- **exposition_risques** — Evaluer l'exposition aux risques
+- **carte_exposition_risques** — Afficher une carte des risques
+
+Essayez par exemple de demander a votre assistant :
+
+> *"Quels sont les risques majeurs au 1 place de la Comedie a Montpellier ?"*
+
+## Variable d'environnement
+
+| Variable | Description | Defaut |
+|---|---|---|
+| `PORT` | Port d'ecoute du serveur HTTP | `3000` |

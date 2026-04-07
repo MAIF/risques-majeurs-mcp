@@ -1,0 +1,58 @@
+---
+sidebar_position: 4
+title: Carte d'exposition aux risques
+description: Outil de visualisation cartographique de l'exposition aux risques
+---
+
+# Carte d'exposition aux risques
+
+L'outil `carte_exposition_risques` combine l'evaluation de l'exposition aux risques avec une **carte interactive** affichant les couches de donnees geographiques. Il utilise le mecanisme de [MCP App](https://modelcontextprotocol.io/) pour afficher une application web embarquee dans le client MCP.
+
+## Parametres d'entree
+
+| Parametre | Type | Obligatoire | Description |
+|---|---|---|---|
+| `longitude` | `number` | Oui | Longitude (EPSG:4326, entre -180 et 180) |
+| `latitude` | `number` | Oui | Latitude (EPSG:4326, entre -90 et 90) |
+| `risques` | `string[]` | Non | Liste des codes de risques a afficher (defaut: tous) |
+
+:::info
+Tous les risques ne sont pas disponibles sur la carte. L'outil `liste_risques` indique quels risques supportent la visualisation cartographique. Actuellement, `catnat` (catastrophes naturelles) n'a pas de couche cartographique.
+:::
+
+## Exemple d'appel
+
+```json
+{
+  "longitude": 3.8767,
+  "latitude": 43.6117,
+  "risques": ["argiles", "inondations"]
+}
+```
+
+## Reponse structuree
+
+En plus de la carte, l'outil retourne les donnees structurees d'exposition pour chaque risque, exploitables par l'agent IA.
+
+## La carte interactive
+
+La carte est une application web basee sur [MapLibre GL](https://maplibre.org/) qui offre :
+
+- **Fond de carte** — Tuiles CARTO en niveaux de gris
+- **Marqueur de position** — Indique les coordonnees demandees
+- **Couches de risques** — Superposition des donnees WMS de Georisques ou GeoJSON
+- **Controle des couches** — Cases a cocher pour afficher/masquer chaque risque
+- **Legendes** — Legende interactive pour chaque couche affichee
+- **Mode plein ecran** — Bascule entre vue inline et plein ecran (si supporte par le client)
+
+### Types de couches
+
+| Risque | Type de couche | Source |
+|---|---|---|
+| Argiles | WMS raster | Georisques (`ALEARG`) |
+| Mouvements de terrain | WMS raster | Georisques (`MVT_LOCALISE`) |
+| Cavites | WMS raster | Georisques (`CAVITE_LOCALISEE`) |
+| Inondations — TRI | WMS raster | Georisques (`LIMITETRI_FXX`) |
+| Inondations — PPR | WMS raster | Georisques (`PPRN_INOND`) |
+| ICPE Seveso | GeoJSON (points) | API Georisques |
+| Installations nucleaires | GeoJSON (points) | API Georisques |

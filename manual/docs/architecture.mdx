@@ -1,0 +1,120 @@
+---
+sidebar_position: 5
+title: Architecture
+description: Architecture technique du serveur Risques Majeurs MCP
+---
+
+# Architecture
+
+## Vue d'ensemble
+
+```mermaid
+flowchart TB
+    subgraph Clients
+        CD[Claude Desktop]
+        CC[Claude Code]
+        AC[Autre client MCP]
+    end
+
+    subgraph "Risques Majeurs MCP"
+        EX[Express HTTP]
+        TR[Streamable HTTP Transport]
+        SRV[McpServer]
+        T1[geocodage]
+        T2[liste_risques]
+        T3[exposition_risques]
+        T4[carte_exposition_risques]
+        RES[Resource: carte HTML]
+    end
+
+    subgraph "APIs externes"
+        IGN[Geoplateforme IGN]
+        GR[Georisques API]
+        WMS[Georisques WMS]
+        CARTO[CARTO tiles]
+    end
+
+    CD & CC & AC -->|HTTP POST /mcp| EX
+    EX --> TR --> SRV
+    SRV --> T1 & T2 & T3 & T4
+    SRV --> RES
+    T1 -->|geocodage| IGN
+    T3 & T4 -->|risques| GR
+    RES -->|couches carte| WMS
+    RES -->|fond de carte| CARTO
+```
+
+## Structure du projet
+
+```
+risques-majeurs-mcp/
+├── server/                 # Code serveur (TypeScript, compile par tsc)
+│   ├── index.ts            # Point d'entree Express + transport MCP
+│   ├── server.ts           # Definition du serveur MCP et des outils
+│   ├── risques.ts          # Definition des 7 risques (fetch, schema, texte, couches)
+│   └── utils.ts            # Helpers (appels API, sources WMS, icones SVG)
+├── client/                 # Application carte (TypeScript, bundle par Vite)
+│   ├── mcp-app.html        # Page HTML
+│   ├── mcp-app.ts          # App MCP (MapLibre GL)
+│   ├── mcp-app.css         # Styles
+│   └── controls.ts         # Controles MapLibre (couches, legendes, plein ecran)
+├── dist/                   # Build de production (genere)
+├── manual/                 # Documentation Docusaurus
+├── package.json
+├── tsconfig.json           # Config TypeScript client
+├── tsconfig.server.json    # Config TypeScript serveur
+├── vitest.config.ts        # Config des tests
+└── mise.toml               # Taches mise
+```
+
+## Transport MCP
+
+Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requete HTTP cree une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un mode **stateless** adapte aux deploiements simples.
+
+```mermaid
+sequenceDiagram
+    participant C as Client MCP
+    participant E as Express
+    participant T as Transport
+    participant S as McpServer
+
+    C->>E: POST /mcp (JSON-RPC)
+    E->>S: createServer()
+    E->>T: new StreamableHTTPServerTransport()
+    S->>T: server.connect(transport)
+    T->>T: handleRequest(req, res, body)
+    T-->>C: Reponse JSON-RPC
+    Note over T,S: Fermeture a la fin de la requete
+```
+
+## Build
+
+Le build se fait en deux etapes :
+
+1. **Serveur** : `tsc` compile les fichiers TypeScript de `server/` vers `dist/` (target ES2024, modules Node16)
+2. **Client** : Vite bundle `client/mcp-app.html` en un **fichier HTML unique** (via `vite-plugin-singlefile`) dans `dist/client/`
+
+Le fichier HTML unique est ensuite servi comme ressource MCP par le serveur, ce qui permet au client MCP d'afficher la carte directement.
+
+## Definition d'un risque
+
+Chaque risque dans `server/risques.ts` est un objet avec la structure suivante :
+
+```typescript
+{
+  code: string;            // Identifiant unique
+  libelle: string;         // Nom affiche
+  fetch(lon, lat);         // Appel API Georisques
+  outputSchema: ZodSchema; // Schema de sortie (Zod)
+  text(exposition);        // Rendu texte
+  layers: [{               // Couches carte (peut etre vide)
+    id: string;
+    nom: string;
+    source(exposition);    // Source MapLibre (raster WMS ou GeoJSON)
+    layer: object;         // Config de la couche MapLibre
+    legend(exposition);    // Element DOM de legende
+  }]
+}
+```
+
+Cette structure modulaire facilite l'ajout de nouveaux risques : il suffit d'ajouter un nouvel objet au tableau `RISQUES`.

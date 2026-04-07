@@ -1,0 +1,49 @@
+---
+sidebar_position: 1
+title: Introduction
+description: Presentation du projet Risques Majeurs MCP
+---
+
+# Introduction
+
+**Risques Majeurs MCP** est un serveur [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) qui permet a un agent IA d'interroger l'exposition aux risques majeurs pour n'importe quelle adresse en France.
+
+## A quoi ca sert ?
+
+Imaginez que vous discutez avec un assistant IA et que vous lui demandez :
+
+> *"Quels sont les risques naturels autour du 20 avenue de Segur a Paris ?"*
+
+Grace a ce serveur MCP, l'assistant peut :
+
+1. **Geocoder l'adresse** pour obtenir les coordonnees GPS
+2. **Interroger les API Georisques** pour evaluer l'exposition aux differents risques
+3. **Afficher une carte interactive** avec les zones de risques
+
+Le tout de facon automatique, en exploitant les donnees ouvertes du Ministere de la Transition Ecologique.
+
+## Pourquoi MCP ?
+
+Le [Model Context Protocol](https://modelcontextprotocol.io/) est un standard ouvert qui permet aux modeles de langage d'interagir avec des sources de donnees et des outils externes. Plutot que d'integrer les donnees directement dans le modele, MCP fournit une interface standardisee pour que l'IA puisse :
+
+- **Appeler des outils** (geocodage, evaluation des risques)
+- **Recuperer des donnees structurees** (niveaux d'exposition, listes de risques)
+- **Afficher des interfaces riches** (cartes interactives)
+
+## Donnees ouvertes
+
+Ce projet s'appuie entierement sur des **API publiques et ouvertes** :
+
+| Source | Usage |
+|---|---|
+| [Georisques](https://www.georisques.gouv.fr/) | Donnees d'exposition aux risques naturels et technologiques |
+| [Geoplateforme IGN](https://data.geopf.fr/) | Geocodage des adresses en France |
+| [CARTO](https://carto.com/) | Tuiles de fond de carte |
+
+## OSS by MAIF
+
+Ce projet est developpe et maintenu par la [MAIF](https://www.maif.fr/) dans le cadre de son engagement open source **[OSS by MAIF](https://maif.github.io/)**. La MAIF contribue activement a l'ecosysteme open source en partageant des outils et des innovations au service de l'interet general.
+
+## Licence
+
+Risques Majeurs MCP est distribue sous licence [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0).

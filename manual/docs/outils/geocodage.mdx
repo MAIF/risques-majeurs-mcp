@@ -1,0 +1,68 @@
+---
+sidebar_position: 2
+title: Geocodage
+description: Outil de geocodage d'adresses en France via l'API IGN
+---
+
+# Geocodage
+
+L'outil `geocodage` transforme une adresse textuelle en coordonnees GPS (longitude, latitude) et en code INSEE de la commune. Il utilise l'[API de geocodage de la Geoplateforme IGN](https://data.geopf.fr/).
+
+## Parametres d'entree
+
+| Parametre | Type | Obligatoire | Description |
+|---|---|---|---|
+| `adresse` | `string` | Oui | L'adresse a geocoder (ex: "20 avenue de Segur, Paris") |
+| `limite` | `number` | Non | Nombre maximum de resultats (1 a 50, defaut: 5) |
+
+## Exemple d'appel
+
+```json
+{
+  "adresse": "20 avenue de Segur, Paris",
+  "limite": 3
+}
+```
+
+## Schema de sortie
+
+Chaque resultat contient :
+
+| Champ | Type | Description |
+|---|---|---|
+| `libelle` | `string` | Libelle complet de l'adresse |
+| `score` | `number` | Score de pertinence (0 a 1) |
+| `type` | `string` | Type de resultat (`housenumber`, `street`, `locality`, `municipality`) |
+| `coordonnees.longitude` | `number` | Longitude (EPSG:4326 / WGS 84) |
+| `coordonnees.latitude` | `number` | Latitude (EPSG:4326 / WGS 84) |
+| `codeInsee` | `string` | Code INSEE de la commune |
+| `commune` | `string` | Nom de la commune |
+| `codePostal` | `string` | Code postal |
+| `contexte` | `string` | Contexte complementaire |
+
+## Exemple de reponse
+
+```json
+{
+  "resultats": [
+    {
+      "libelle": "20 Avenue de Segur 75007 Paris",
+      "score": 0.96,
+      "type": "housenumber",
+      "coordonnees": {
+        "longitude": 2.3089,
+        "latitude": 48.8534
+      },
+      "codeInsee": "75107",
+      "commune": "Paris",
+      "codePostal": "75007",
+      "contexte": "75, Paris, Ile-de-France"
+    }
+  ]
+}
+```
+
+## API utilisee
+
+- **Endpoint** : `https://data.geopf.fr/geocodage/search`
+- **Documentation** : [Geoplateforme IGN — Geocodage](https://data.geopf.fr/)

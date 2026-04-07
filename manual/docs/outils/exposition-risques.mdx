@@ -1,0 +1,63 @@
+---
+sidebar_position: 3
+title: Exposition aux risques
+description: Outil d'evaluation textuelle de l'exposition aux risques majeurs
+---
+
+# Exposition aux risques
+
+L'outil `exposition_risques` evalue le niveau d'exposition aux risques majeurs pour des coordonnees donnees. Il retourne un **texte descriptif** pour chaque risque evalue.
+
+## Parametres d'entree
+
+| Parametre | Type | Obligatoire | Description |
+|---|---|---|---|
+| `longitude` | `number` | Oui | Longitude (EPSG:4326, entre -180 et 180) |
+| `latitude` | `number` | Oui | Latitude (EPSG:4326, entre -90 et 90) |
+| `risques` | `string[]` | Non | Liste des codes de risques a evaluer (defaut: tous) |
+
+## Codes de risques disponibles
+
+| Code | Risque |
+|---|---|
+| `argiles` | Retrait-gonflement des argiles |
+| `mouvement_terrain` | Mouvements de terrain |
+| `cavites` | Cavites souterraines |
+| `inondations` | Inondations (TRI, AZI, PAPI, PPRN) |
+| `catnat` | Catastrophes naturelles |
+| `icpe` | Installations classees Seveso |
+| `installations_nucleaires` | Installations nucleaires |
+
+## Exemple d'appel
+
+```json
+{
+  "longitude": 2.3522,
+  "latitude": 48.8566,
+  "risques": ["argiles", "inondations"]
+}
+```
+
+## Format de reponse
+
+La reponse est un **texte** concatenant les resultats de chaque risque evalue. Par exemple :
+
+```
+Le niveau d'exposition au risque de retrait-gonflement des argiles
+a l'adresse indiquee est : Exposition moyenne (score de 2 sur 3)
+
+3 zones a risque d'inondation recensees dans un rayon de 5 kilometres
+autour de l'adresse indiquee. Voici la liste des zones et des risques
+concernes :
+  - TRI Paris exposee aux risques Debordement de cours d'eau
+```
+
+:::tip
+Cet outil est ideal quand l'agent IA a besoin d'un resume textuel des risques pour formuler une reponse a l'utilisateur. Pour une visualisation cartographique, utilisez plutot [**carte_exposition_risques**](./carte-exposition-risques).
+:::
+
+## Rayon de recherche
+
+La plupart des risques sont evalues dans un **rayon de 5 km** autour des coordonnees fournies, a l'exception de :
+- **Argiles** : evaluation ponctuelle (pas de rayon)
+- **Installations nucleaires** : rayon defini par l'API Georisques
