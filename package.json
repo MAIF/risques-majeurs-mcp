@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.server.json && cross-env INPUT=client/mcp-app.html vite build",
     "start-dev": "concurrently \"tsx watch server/index.ts\" \"cross-env NODE_ENV=development INPUT=client/mcp-app.html vite build --watch\"",
-    "start": "concurrently \"tsx watch server/index.ts\" \"cross-env INPUT=client/mcp-app.html vite build --watch\""
+    "start": "concurrently \"tsx watch server/index.ts\" \"cross-env INPUT=client/mcp-app.html vite build --watch\"",
+    "test": "vitest run"
   },
   "description": "",
   "dependencies": {
@@ -23,6 +24,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.3",
     "concurrently": "^9.2.1",
+    "vitest": "^3.1.1",
     "cross-env": "^10.1.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

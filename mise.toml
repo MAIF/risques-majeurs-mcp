@@ -15,6 +15,11 @@ description = "Start server in development mode (watch)"
 depends = ["install"]
 run = "npm run start-dev"
 
+[tasks.test]
+description = "Run tests"
+depends = ["install"]
+run = "npm test"
+
 [tasks.start]
 description = "Start server in production mode (watch)"
 depends = ["build"]
