@@ -1,30 +1,236 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
- */
-
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #1a73a7;
+  --ifm-color-primary-dark: #176794;
+  --ifm-color-primary-darker: #15618c;
+  --ifm-color-primary-darkest: #115073;
+  --ifm-color-primary-light: #1d7fba;
+  --ifm-color-primary-lighter: #1f85c2;
+  --ifm-color-primary-lightest: #2496db;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
+  --ifm-color-primary: #4db8e8;
+  --ifm-color-primary-dark: #32add4;
+  --ifm-color-primary-darker: #2ea3c9;
+  --ifm-color-primary-darkest: #2686a6;
+  --ifm-color-primary-light: #6ec5ed;
+  --ifm-color-primary-lighter: #7dcbef;
+  --ifm-color-primary-lightest: #a5dbf4;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Hero */
+
+.hero-banner {
+  background: linear-gradient(135deg, #0d4f7a 0%, #1a73a7 40%, #2496db 100%);
+  color: white;
+  padding: 5rem 0 4rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.hero-banner .container {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-logo {
+  width: 160px;
+  height: 160px;
+  border-radius: 24px;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.3));
+}
+
+.hero-banner h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.hero-banner p {
+  font-size: 1.35rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto 2rem;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-buttons .button {
+  font-size: 1.1rem;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.hero-buttons .button--secondary {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  color: white;
+}
+
+.hero-buttons .button--secondary:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: white;
+  color: white;
+}
+
+@media screen and (max-width: 996px) {
+  .hero-banner {
+    padding: 3rem 1.5rem;
+  }
+  .hero-banner h1 {
+    font-size: 2.2rem;
+  }
+  .hero-banner p {
+    font-size: 1.1rem;
+  }
+  .hero-logo {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Features */
+
+.features-section {
+  padding: 4rem 0;
+}
+
+.features-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 3rem;
+}
+
+.feature-card {
+  text-align: center;
+  padding: 2rem 1.5rem;
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.feature-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.feature-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card p {
+  color: var(--ifm-color-content-secondary);
+  line-height: 1.6;
+}
+
+/* Risks section */
+
+.risks-section {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.risks-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 3rem;
+}
+
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.risk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  transition: border-color 0.2s;
+}
+
+.risk-item:hover {
+  border-color: var(--ifm-color-primary);
+}
+
+.risk-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.risk-item span:last-child {
+  font-weight: 500;
+}
+
+/* OSS section */
+
+.oss-section {
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.oss-section h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.oss-section p {
+  max-width: 700px;
+  margin: 0 auto 2rem;
+  font-size: 1.1rem;
+  color: var(--ifm-color-content-secondary);
+  line-height: 1.7;
+}
+
+/* Quick start */
+
+.quickstart-section {
+  padding: 4rem 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.quickstart-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+}
+
+.quickstart-section pre {
+  max-width: 700px;
+  margin: 0 auto;
+  border-radius: 10px;
 }
