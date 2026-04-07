@@ -1,0 +1,21 @@
+[tools]
+node = "24"
+
+[tasks.install]
+description = "Install dependencies"
+run = "npm install"
+
+[tasks.build]
+description = "Build server and client"
+depends = ["install"]
+run = "npm run build"
+
+[tasks.dev]
+description = "Start server in development mode (watch)"
+depends = ["install"]
+run = "npm run start-dev"
+
+[tasks.start]
+description = "Start server in production mode (watch)"
+depends = ["build"]
+run = "npm start"
