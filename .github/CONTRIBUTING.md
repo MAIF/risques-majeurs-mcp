@@ -42,7 +42,7 @@ To add a new risk, add an entry to the `RISQUES` array in `server/risques.ts`. E
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 20 (or use [mise](https://mise.jdx.dev/) which will install the correct version automatically)
+- [Node.js](https://nodejs.org/) >= 24 (or use [mise](https://mise.jdx.dev/) which will install the correct version automatically)
 
 ### Getting Started
 
