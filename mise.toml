@@ -20,6 +20,18 @@ description = "Run tests"
 depends = ["install"]
 run = "npm test"
 
+[tasks.release]
+description = "Create a new release (usage: mise run release -- 1.2.3)"
+depends = ["build", "test"]
+run = """
+VERSION=${1:?Usage: mise run release -- <version>}
+npm version $VERSION --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "release v$VERSION"
+git tag "v$VERSION"
+echo "Release v$VERSION ready. Run 'git push && git push --tags' to publish."
+"""
+
 [tasks.start]
 description = "Start server in production mode (watch)"
 depends = ["build"]

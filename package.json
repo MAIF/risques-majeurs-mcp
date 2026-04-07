@@ -1,15 +1,25 @@
 {
   "name": "risques-majeurs-mcp",
   "version": "1.0.0",
+  "description": "Serveur MCP d'exposition aux risques majeurs en France",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "risques-majeurs-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "license",
+    "readme.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.server.json && cross-env INPUT=client/mcp-app.html vite build",
     "start-dev": "concurrently \"tsx watch server/index.ts\" \"cross-env NODE_ENV=development INPUT=client/mcp-app.html vite build --watch\"",
     "start": "concurrently \"tsx watch server/index.ts\" \"cross-env INPUT=client/mcp-app.html vite build --watch\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
   },
-  "description": "",
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.1.2",
     "@modelcontextprotocol/sdk": "^1.27.1",
