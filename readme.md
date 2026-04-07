@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Risques Majeurs MCP" width="200">
+</p>
+
 # Risques Majeurs MCP
 
 Serveur [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) permettant d'interroger l'exposition aux risques majeurs en France. Il s'appuie sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/) et de la [Géoplateforme IGN](https://data.geopf.fr/) pour fournir des données de géocodage et d'évaluation des risques, ainsi qu'une carte interactive de visualisation.
