@@ -810,7 +810,7 @@ export const RISQUES = [
           }
         },
         legend: (exposition: any) : Node => makeLegends([
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#v', strokeWidth: 1 })!, 'Centrale'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#c62222', strokeWidth: 1 })!, 'Centrale'],
           [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Autre installation']
         ])
       }
