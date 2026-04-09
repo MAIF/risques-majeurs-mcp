@@ -10,7 +10,8 @@ import {
   makeTriangleUpSvg,
   makeTriangleDownSvg,
   makeStarSvg,
-  makeLegends
+  makeLegends,
+  sanitize
 } from './utils.js';
 
 
@@ -658,7 +659,7 @@ export const RISQUES = [
             data: {
               type: 'FeatureCollection',
               features: exposition.installations.map((i: any) => {
-                let description = i.raisonSociale;
+                let description = sanitize(i.raisonSociale);
                 let color = '#000000';
                 switch (i.seveso) {
                   case 'seveso_seuil_haut':
@@ -676,7 +677,7 @@ export const RISQUES = [
                 return {
                   type: 'Feature',
                   properties: {
-                    raisonSociale: i.raisonSociale,
+                    raisonSociale: sanitize(i.raisonSociale),
                     seveso: i.seveso,
                     description,
                     color
@@ -788,8 +789,8 @@ export const RISQUES = [
                 return {
                   type: 'Feature',
                   properties: {
-                    nom: i.nom,
-                    type: i.type,
+                    nom: sanitize(i.nom),
+                    type: sanitize(i.type),
                     color
                   },
                   geometry: {

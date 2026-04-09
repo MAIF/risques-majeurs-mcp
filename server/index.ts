@@ -4,15 +4,29 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import type { Request, Response } from "express";
 import { createServer } from "./server.js";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 
+const parseIntEnv = (value: string | undefined, fallback: number) => {
+  const parsed = parseInt(value || "", 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
 
-const PORT = Number.isNaN(parseInt(process.env.PORT || "3000", 10)) ? 3000 : parseInt(process.env.PORT || "3000", 10);
+const PORT = parseIntEnv(process.env.PORT, 3000);
 const HOST = process.env.NODE_ENV === 'development' ? '127.0.0.1' : '0.0.0.0';
+const RATE_LIMIT_WINDOW_MS = parseIntEnv(process.env.RATE_LIMIT_WINDOW_MS, 60 * 1000);
+const RATE_LIMIT_MAX = parseIntEnv(process.env.RATE_LIMIT_MAX, 100);
 const app = createMcpExpressApp({host: HOST});
 
 app.use(
   cors({ origin: "*" }),
 );
+
+app.use(rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  limit: RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
 
 // --- POST /mcp : requêtes JSON-RPC ---
 app.post("/mcp", async (req: Request, res: Response) => {

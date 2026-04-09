@@ -1,3 +1,12 @@
+export const sanitize = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any) => {
   const url = `https://georisques.gouv.fr/${path}?${params}`;
   const response = await fetch(url);
