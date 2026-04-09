@@ -7,7 +7,8 @@ import cors from "cors";
 
 
 const PORT = Number.isNaN(parseInt(process.env.PORT || "3000", 10)) ? 3000 : parseInt(process.env.PORT || "3000", 10);
-const app = createMcpExpressApp({host: '0.0.0.0'});
+const HOST = process.env.NODE_ENV === 'development' ? '127.0.0.1' : '0.0.0.0';
+const app = createMcpExpressApp({host: HOST});
 
 app.use(
   cors({ origin: "*" }),
@@ -27,7 +28,7 @@ app.post("/mcp", async (req: Request, res: Response) => {
         server.close();
     });
   } catch (error) {
-    console.error("Erreur POST /mcp :", error);
+    console.error("Erreur POST /mcp :", error.message);
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: "2.0",
