@@ -2,15 +2,18 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { RISQUES } from "./risques.js";
 
+const require = createRequire(import.meta.url);
+const { version } = require("../package.json");
 const DIST_DIR = path.join(import.meta.dirname, "../dist");
 
 
 export function createServer() {
   const server = new McpServer({
     name: "risques-majeurs-mcp",
-    version: "1.0.0",
+    version,
   });
 
 
