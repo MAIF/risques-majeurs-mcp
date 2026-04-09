@@ -6,7 +6,7 @@ import { createServer } from "./server.js";
 import cors from "cors";
 
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = Number.isNaN(parseInt(process.env.PORT || "3000", 10)) ? 3000 : parseInt(process.env.PORT || "3000", 10);
 const app = createMcpExpressApp({host: '0.0.0.0'});
 
 app.use(
