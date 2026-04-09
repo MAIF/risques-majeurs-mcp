@@ -42,8 +42,8 @@ app.post("/mcp", async (req: Request, res: Response) => {
         transport.close();
         server.close();
     });
-  } catch (error) {
-    console.error("Erreur POST /mcp :", error.message);
+  } catch (error: unknown) {
+    console.error("Erreur POST /mcp :", error instanceof Error ? error.message : error);
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: "2.0",
