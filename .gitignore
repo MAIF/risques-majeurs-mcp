@@ -1,2 +1,22 @@
 dist
 node_modules
+
+# Environment variables
+.env
+.env.*
+
+# Secrets / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
