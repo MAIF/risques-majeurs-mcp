@@ -58,7 +58,15 @@ npm run build
 npm start
 ```
 
-Le serveur démarre sur `http://localhost:3000/mcp` (configurable via la variable d'environnement `PORT`).
+Le serveur démarre sur `http://localhost:3000/mcp` et peut être configuré via les variables d'environnement suivantes :
+
+| Variable | Description | Défaut |
+|---|---|---|
+| `PORT` | Port d'écoute du serveur | `3000` |
+| `NODE_ENV` | `development` pour écouter sur `127.0.0.1`, sinon `0.0.0.0` | — |
+| `CORS_ORIGIN` | Origine autorisée pour les requêtes CORS | `*` |
+| `RATE_LIMIT_WINDOW_MS` | Fenêtre de temps du rate limiting (en ms) | `60000` |
+| `RATE_LIMIT_MAX` | Nombre max de requêtes par fenêtre par IP | `100` |
 
 ### Configuration MCP
 
@@ -73,6 +81,10 @@ Pour connecter ce serveur à un client MCP, ajoutez-le dans votre configuration 
   }
 }
 ```
+
+## Transport
+
+Le serveur utilise le transport [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) en mode **stateless** : chaque requête est indépendante et aucun identifiant de session n'est généré. Tous les outils exposés étant en lecture seule et idempotents, il n'y a pas besoin de maintenir un état entre les requêtes.
 
 ## Architecture
 

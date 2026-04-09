@@ -69,7 +69,7 @@ risques-majeurs-mcp/
 
 ## Transport MCP
 
-Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requete HTTP cree une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un mode **stateless** adapte aux deploiements simples.
+Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requete HTTP cree une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un choix delibere : tous les outils exposes sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un etat entre les requetes.
 
 ```mermaid
 sequenceDiagram
