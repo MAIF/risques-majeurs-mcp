@@ -696,13 +696,15 @@ export const RISQUES = [
         layer: {
           'type': 'circle',
           'paint': {
-            'circle-color': ['get', 'color']
+            'circle-color': ['get', 'color'],
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#ffffff'
           }
         },
         legend: (exposition: any) : Node => makeLegends([
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#fc0d1a', strokeWidth: 1 })!, 'Seveso seuil haut'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Seveso seuil bas'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#000000', strokeWidth: 1 })!, 'Non Seveso']
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#fc0d1a', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Seveso seuil haut'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Seveso seuil bas'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#000000', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Non Seveso']
         ])
       }
     ]
@@ -807,12 +809,14 @@ export const RISQUES = [
         layer: {
           'type': 'circle',
           'paint': {
-            'circle-color': ['get', 'color']
+            'circle-color': ['get', 'color'],
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#ffffff'
           }
         },
         legend: (exposition: any) : Node => makeLegends([
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#c62222', strokeWidth: 1 })!, 'Centrale'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#2e404f', strokeWidth: 1 })!, 'Autre installation']
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Centrale'],
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Autre installation']
         ])
       }
     ]
