@@ -15,7 +15,7 @@ export class FullscreenControl implements IControl {
         );
         let btn = document.createElement('button');
         btn.className = 'maplibregl-ctrl-toggle-displaymode';
-        btn.textContent = 'Toggle fullscreen';
+        btn.textContent = 'Plein écran';
         btn.addEventListener('click', this._onClick);
         this._container.appendChild(btn);
         return this._container;
@@ -111,7 +111,7 @@ export class LegendsControl implements IControl {
         );
         this._btn = document.createElement('button');
         this._btn.className = 'toggle-legends';
-        this._btn.textContent = 'Legends';
+        this._btn.textContent = 'Légende';
         this._btn.addEventListener('click', () => this.togglePopup());
         this.hide();
         return this._container;

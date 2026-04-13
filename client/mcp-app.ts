@@ -1,6 +1,7 @@
 import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
 import { Map, Marker, NavigationControl } from "maplibre-gl";
+import { fr } from 'maplibre-ui-translations';
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./mcp-app.css";
 import { FullscreenControl, LayersControl, LegendsControl } from './controls.ts';
@@ -35,7 +36,8 @@ app.ontoolresult = (result: any) => {
                 [min[0] - widthBuffer, min[1] - widthBuffer],
                 [max[0] + heightBuffer, max[1] + heightBuffer]
             ],
-            maplibreLogo: false
+            maplibreLogo: false,
+            locale: fr
         });
         
         map.fitBounds([min, max]);
