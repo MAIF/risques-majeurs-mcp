@@ -111,7 +111,7 @@ Chaque risque dans `server/risques.ts` est un objet avec la structure suivante :
     id: string;
     nom: string;
     source(exposition);    // Source MapLibre (raster WMS ou GeoJSON)
-    layer: object;         // Config de la couche MapLibre
+    layer: object | object[];   // Config de la couche MapLibre (tableau accepte pour appliquer differents styles)
     legend(exposition);    // Element DOM de legende
   }]
 }

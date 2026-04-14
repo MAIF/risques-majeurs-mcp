@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { format, parse } from 'date-and-time';
+import { circle } from "@turf/turf";
 import {
   callGeorisqueAPI,
   makeRasterGeorisqueSource,
@@ -728,6 +729,7 @@ export const RISQUES = [
           return {
             nom: i.nomInstallationNucleaire,
             type: i.typeInstallationNucleaire,
+            rayon_ppi: i.ppi && i.rayon_ppi,
             longitude: i.longitude,
             latitude: i.latitude
           }
@@ -750,6 +752,11 @@ export const RISQUES = [
                     type: z
                       .string()
                       .describe("Type d'installation"),
+                    rayon_ppi: z
+                      .number()
+                      .nullable()
+                      .optional()
+                      .describe("Rayon du Plan Particulier d'Intervention (PPI)"),
                     longitude: z
                       .number()
                       .describe("Longitude"),
@@ -766,7 +773,7 @@ export const RISQUES = [
       let result = `${exposition.total} installations nucléaires sont recensées autour de l'adresse indiquée.`;
       if (exposition.total > 0) {
         result += ' Voici la liste des installations : ' + exposition.installations
-          .map((i: any) => `\n  - ${i.nom} (${i.type})`);
+          .map((i: any) => `\n  - ${i.nom} (${i.type})${i.rayon_ppi ? ` (Rayon du Plan Particulier d'Intervention (PPI) : ${i.rayon_ppi} m)` : ''}`);
       }
       return result;
     },
@@ -779,7 +786,7 @@ export const RISQUES = [
             type: 'geojson',
             data: {
               type: 'FeatureCollection',
-              features: exposition.installations.map((i: any) => {
+              features: exposition.installations.flatMap((i: any) => {
                 let color = '#2e404f';
                 switch (i.type) {
                   case 'Centrales nucléaires':
@@ -788,35 +795,77 @@ export const RISQUES = [
                   default:
                     break;
                 }
-                return {
-                  type: 'Feature',
-                  properties: {
-                    nom: sanitize(i.nom),
-                    type: sanitize(i.type),
-                    color
-                  },
-                  geometry: {
-                    type: 'Point',
-                    coordinates: [i.longitude, i.latitude]
-                  }
+                const properties = {
+                  nom: sanitize(i.nom),
+                  type: sanitize(i.type),
+                  rayon_ppi: i.rayon_ppi,
+                  color
                 };
+                let features = [
+                  {
+                    type: 'Feature',
+                    properties: {
+                      nom: sanitize(i.nom),
+                      type: sanitize(i.type),
+                      color
+                    },
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [i.longitude, i.latitude]
+                    }
+                  }
+                ];
+                if (i.rayon_ppi) {
+                  features = [
+                    ...features,
+                    circle(
+                      [i.longitude, i.latitude],
+                      i.rayon_ppi,
+                      { steps: 64, units: 'meters', properties }
+                    )
+                  ];
+                }
+                return features
               })
             },
             maxzoom: 16,
             attribution: 'Ministère de la Transition Écologique'
           };
         },
-        layer: {
-          'type': 'circle',
-          'paint': {
-            'circle-color': ['get', 'color'],
-            'circle-stroke-width': 1,
-            'circle-stroke-color': '#ffffff'
+        layer: [
+          // Marker
+          {
+            'type': 'circle',
+            'paint': {
+              'circle-color': ['get', 'color'],
+              'circle-stroke-width': 1,
+              'circle-stroke-color': '#ffffff'
+            },
+            'filter': ["==", ["geometry-type"], "Point"]
+          },
+          // Radius fill
+          {
+            'type': 'fill',
+            'paint': {
+              'fill-color': ['get', 'color'],
+              'fill-opacity': 0.05,
+            },
+            'filter': ["==", ["geometry-type"], "Polygon"]
+          },
+          // Radius outline
+          {
+            'type': 'line',
+            'paint': {
+              'line-width': 2,
+              'line-color': '#c62222'
+            },
+            'filter': ["==", ["geometry-type"], "Polygon"]
           }
-        },
+        ],
         legend: (exposition: any) : Node => makeLegends([
           [ makeCircleSvg({ fillOpacity: 1, fillColor: '#c62222', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Centrale'],
-          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Autre installation']
+          [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Autre installation'],
+          [ makeCircleSvg({ fillOpacity: 0.05, fillColor: '#c62222', strokeColor: '#c62222', strokeWidth: 5 })!, 'Rayon du PPI']
         ])
       }
     ]

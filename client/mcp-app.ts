@@ -18,7 +18,7 @@ app.ontoolresult = (result: any) => {
     if (result.structuredContent.exposition) {
         // Calculate display and limit bounds
         const SHOW_OFFSET = 0.01;
-        const PAD_RATIO = 1.5;
+        const PAD_RATIO = 10;
         const min: [number, number] = [result.structuredContent.exposition.longitude - SHOW_OFFSET, result.structuredContent.exposition.latitude - SHOW_OFFSET];
         const max: [number, number] = [result.structuredContent.exposition.longitude + SHOW_OFFSET, result.structuredContent.exposition.latitude + SHOW_OFFSET];
 		const widthBuffer = (max[0] - min[0]) * PAD_RATIO;
@@ -94,13 +94,15 @@ app.ontoolresult = (result: any) => {
                         const source: any = l.source(exposition);
                         console.log(source);
                         map.addSource(l.id, source);
-                        map.addLayer({
-                            ...l.layer,
-                            id: l.id,
+                        // May contain multiple maplibre draw layers
+                        const drawLayers = [l.layer].flat();
+                        drawLayers.forEach((layer,idx) => map.addLayer({
+                            ...layer,
+                            id: `${l.id}_${idx}`,
                             source: l.id
-                        });
+                        }));
                         return {
-                            id: l.id,
+                            ids: drawLayers.map((layer,idx) => `${l.id}_${idx}`),
                             label: l.nom,
                             legend: l.legend(exposition)
                         };
@@ -109,7 +111,7 @@ app.ontoolresult = (result: any) => {
 
             // Create control
             if (layers.length > 1) {
-                let label_to_layer_ids = Object.fromEntries(layers.map(l => [l.label, [l.id]]));
+                let label_to_layer_ids = Object.fromEntries(layers.map(l => [l.label, l.ids]));
                 map.addControl(new LayersControl(label_to_layer_ids), 'top-left');
             }
 
