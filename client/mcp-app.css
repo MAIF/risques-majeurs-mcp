@@ -42,27 +42,36 @@ body {
     width: auto !important;
 }
 
-.legends-control .legend {
+.legends-control .legends {
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+    padding: .2em;
+    max-width: 400px;
+    overflow: auto;
+}
+
+.legends-control .legends .legend {
     display: flex;
     flex-direction: column;
     padding: .2em;
 }
 
-.legends-control .legend > span {
+.legends-control .legends .legend > span {
     font-weight: bold;
 }
 
-.legends-control  .legend ul {
+.legends-control .legends .legend ul {
     list-style-type: none;
     margin: 0;
     padding: 0;
 }
 
-.legends-control .legend-entry {
+.legends-control .legends .legend-entry {
     text-wrap: nowrap;
 }
 
-.legends-control .legend-entry svg {
+.legends-control .legends .legend-entry svg {
     width: 12px;
     height: 12px;
     margin-right: 5px;

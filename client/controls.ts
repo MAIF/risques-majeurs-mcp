@@ -129,7 +129,7 @@ export class LegendsControl implements IControl {
     }
     show() {
         const nodes = this._legends
-            .filter(l => this._map.getLayoutProperty(l.id, "visibility") !== "none")
+            .filter(l => l.ids.some((id: string) => this._map.getLayoutProperty(id, "visibility") !== "none"))
             .map(l => {
                 const div = document.createElement('div');
                 div.className = 'legend';
@@ -139,7 +139,10 @@ export class LegendsControl implements IControl {
                 div.appendChild(l.legend);
                 return div;
             });
-        this._container.replaceChildren(this._btn, ...nodes);
+        const legends = document.createElement('div');
+        legends.className = 'legends';
+        nodes.forEach(n => legends.appendChild(n));
+        this._container.replaceChildren(this._btn, legends);
         this._open = true;
     }
 }
