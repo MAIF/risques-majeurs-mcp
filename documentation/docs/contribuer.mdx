@@ -67,7 +67,7 @@ Pour ajouter un nouveau risque, ajoutez une entree dans le tableau `RISQUES` du 
   code: 'mon_risque',                    // Identifiant unique
   libelle: 'Mon risque',                 // Nom affiche
   fetch: async (longitude, latitude) => {
-    // Appel a l'API Georisques
+    // Appel a l'API Georisques (aiguillage vers l'endpoint v1 ou v2 selon la configuration du jeton d'authentification)
     // Retourne les donnees brutes
   },
   outputSchema: z.object({...}),         // Schema Zod

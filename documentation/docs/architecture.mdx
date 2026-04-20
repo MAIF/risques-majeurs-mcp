@@ -104,7 +104,7 @@ Chaque risque dans `server/risques.ts` est un objet avec la structure suivante :
 {
   code: string;            // Identifiant unique
   libelle: string;         // Nom affiche
-  fetch(lon, lat);         // Appel API Georisques
+  fetch(lon, lat);         // Appel API Georisques (aiguillage vers l'endpoint v1 ou v2 selon la configuration du jeton d'authentification)
   outputSchema: ZodSchema; // Schema de sortie (Zod)
   text(exposition);        // Rendu texte
   layers: [{               // Couches carte (peut etre vide)

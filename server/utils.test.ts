@@ -58,7 +58,19 @@ describe('callGeorisqueAPI', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await callGeorisqueAPI('api/v1/rga', new URLSearchParams({ latlon: '2.0,48.0' }), {});
-    expect(fetchMock).toHaveBeenCalledWith('https://georisques.gouv.fr/api/v1/rga?latlon=2.0%2C48.0');
+    expect(fetchMock).toHaveBeenCalledWith('https://georisques.gouv.fr/api/v1/rga?latlon=2.0%2C48.0', { headers: {} });
+  });
+
+  it('sets up authorization header appropriately', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: vi.fn().mockResolvedValue({}),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await callGeorisqueAPI('api/v2/rga', new URLSearchParams({ longitude: '2.0', latitude: '48.0' }), {}, 'token');
+    expect(fetchMock).toHaveBeenCalledWith('https://georisques.gouv.fr/api/v2/rga?longitude=2.0&latitude=48.0', { headers: { 'Authorization': 'Bearer token' } });
   });
 });
 

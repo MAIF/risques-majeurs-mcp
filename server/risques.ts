@@ -25,14 +25,34 @@ export const RISQUES = [
     code: 'argiles',
     libelle: 'Retrait-gonflement des argiles',
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-      });
-      const data: any = await callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" });
-      return {
-        libelle: data.exposition,
-        score: parseInt(data.codeExposition)
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+        });
+        const data: any = await callGeorisqueAPI('api/v2/rga', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        if (data.totalElements > 0) {
+          return {
+            libelle: data.content[0].exposition,
+            score: parseInt(data.content[0].codeExposition)
+          };
+        } else {
+          return {
+            libelle: 'Non exposé',
+            score: 0
+          };
+        }
+      } else {
+        const params = new URLSearchParams({
+          latlon: `${longitude},${latitude}`,
+        });
+        const data: any = await callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" });
+        return {
+          libelle: data.exposition,
+          score: parseInt(data.codeExposition)
+        };
+      }
     },
     outputSchema: z
           .object({
@@ -74,25 +94,49 @@ export const RISQUES = [
     code: 'mouvement_terrain',
     libelle: 'Mouvements de terrain',
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-        rayon: '5000',
-        page_size: '1000'
-      });
-      const data: any = await callGeorisqueAPI('api/v1/mvt', params, { data: [] });
-      return {
-        total: data.data.length,
-        mouvements: data.data.map((m: any) => {
-          return {
-            type: m.type,
-            lieu: m.lieu,
-            commentaire: m.commentaire_lieu,
-            date: m.date_debut,
-            longitude: m.longitude,
-            latitude: m.latitude
-          }
-        })
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          pageSize: '1000',
+        });
+        const data: any = await callGeorisqueAPI('api/v2/mvt', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        return {
+          total: data.totalElements,
+          mouvements: data.content.map((m: any) => {
+            return {
+              type: m.type,
+              lieu: m.lieu,
+              commentaire: m.commentaireLieu,
+              date: m.dateDebut,
+              longitude: m.longitude,
+              latitude: m.latitude
+            }
+          })
+        };
+      } else {
+        const params = new URLSearchParams({
+          latlon: `${longitude},${latitude}`,
+          rayon: '5000',
+          page_size: '1000'
+        });
+        const data: any = await callGeorisqueAPI('api/v1/mvt', params, { data: [] });
+        return {
+          total: data.data.length,
+          mouvements: data.data.map((m: any) => {
+            return {
+              type: m.type,
+              lieu: m.lieu,
+              commentaire: m.commentaire_lieu,
+              date: m.date_debut,
+              longitude: m.longitude,
+              latitude: m.latitude
+            }
+          })
+        };
+      }
     },
     outputSchema: z
           .object({
@@ -166,23 +210,45 @@ export const RISQUES = [
     code: 'cavites',
     libelle: 'Cavités',
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-        rayon: '5000',
-        page_size: '1000'
-      });
-      const data: any = await callGeorisqueAPI('api/v1/cavites', params, { data: [] });
-      return {
-        total: data.data.length,
-        cavites: data.data.map((c: any) => {
-          return {
-            type: c.type,
-            nom: c.nom,
-            longitude: c.longitude,
-            latitude: c.latitude
-          }
-        })
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          pageSize: '1000',
+        });
+        const data: any = await callGeorisqueAPI('api/v2/cavites', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        return {
+          total: data.totalElements,
+          cavites: data.content.map((c: any) => {
+            return {
+              type: c.type,
+              nom: c.nom,
+              longitude: c.longitude,
+              latitude: c.latitude
+            }
+          })
+        };
+      } else {
+        const params = new URLSearchParams({
+          latlon: `${longitude},${latitude}`,
+          rayon: '5000',
+          page_size: '1000'
+        });
+        const data: any = await callGeorisqueAPI('api/v1/cavites', params, { data: [] });
+        return {
+          total: data.data.length,
+          cavites: data.data.map((c: any) => {
+            return {
+              type: c.type,
+              nom: c.nom,
+              longitude: c.longitude,
+              latitude: c.latitude
+            }
+          })
+        };
+      }
     },
     outputSchema: z
           .object({
@@ -252,66 +318,130 @@ export const RISQUES = [
     code: 'inondations',
     libelle: "Inondations",
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-        rayon: '5000',
-        page_size: '1000'
-      });
-      const dataTri: any = await callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] });
-      const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
-      const dataPapi: any = await callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] });
-      const dataPpr: any = await callGeorisqueAPI('api/v1/ppr', params, { data: [] });
-      const filteredPpr = dataPpr.data
-        .filter((p: any) => p.risque.code_risque === '11'); // Inondation
-      return {
-        tri: {
-          total: dataTri.data.length,
-          zones: dataTri.data.map((z: any) => {
-            return {
-              libelle: z.libelle_tri,
-              risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
-              code_insee: z.code_insee,
-              commune: z.libelle_commune,
-              date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
-            }
-          })
-        },
-        azi: {
-          total: dataAzi.data.length,
-          zones: dataAzi.data.map((z: any) => {
-            return {
-              libelle: z.libelle_azi,
-              risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
-              code_insee: z.code_insee,
-              commune: z.libelle_commune,
-              date: z.date_debut_information && format(parse(z.date_debut_information, 'DD/MM/YYYY'), 'YYYY-MM-DD')
-            }
-          })
-        },
-        papi: {
-          total: dataPapi.data.length,
-          programmes: dataPapi.data.map((p: any) => {
-            return {
-              libelle: p.libelle_papi,
-              risques: p.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
-              code_insee: p.code_insee,
-              commune: p.libelle_commune,
-              date: p.date_labellisation && format(parse(p.date_labellisation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
-            }
-          })
-        },
-        ppr: {
-          total: filteredPpr.length,
-          plans: filteredPpr.map((p: any) => {
-            return {
-              libelle: p.nom_ppr,
-              risque: p.risque.libelle_risque,
-              commune: p.libelle_commune,
-              date: p.date_approbation && format(parse(p.date_approbation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
-            }
-          })
-        }
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          pageSize: '1000',
+        });
+        const dataTri: any = await callGeorisqueAPI('api/v2/gaspar/tri', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const dataAzi: any = await callGeorisqueAPI('api/v2/gaspar/azi', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const dataPapi: any = await callGeorisqueAPI('api/v2/gaspar/papi', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        params.append('codesAlea', 'INOND');
+        const dataPpr: any = await callGeorisqueAPI('api/v2/gaspar/pprn', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        return {
+          tri: {
+            total: dataTri.totalElements,
+            zones: dataTri.content.map((z: any) => {
+              return {
+                libelle: z.libelle,
+                risques: [...new Set(z.communes.flatMap((c:  any) => c.aleas).map((a: any) => a.libelle))],
+                code_insee: z.communes[0].codeInsee,
+                commune: z.communes[0].nom,
+                date: z.dateModification && format(parse(z.dateModification, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          azi: {
+            total: dataAzi.totalElements,
+            zones: dataAzi.content.map((z: any) => {
+              return {
+                libelle: z.libelle,
+                risques: [...new Set(z.communes.flatMap((c:  any) => c.aleas).map((a: any) => a.libelle))],
+                code_insee: z.communes[0].codeInsee,
+                commune: z.communes[0].nom,
+                date: z.dateModification && format(parse(z.dateModification, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          papi: {
+            total: dataPapi.totalElements,
+            programmes: dataPapi.content.map((p: any) => {
+              return {
+                libelle: p.libelle,
+                risques: [...new Set(p.communes.flatMap((c:  any) => c.aleas).map((a: any) => a.libelle))],
+                code_insee: p.communes[0].codeInsee,
+                commune: p.communes[0].nom,
+                date: p.dateModification && format(parse(p.dateModification, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          ppr: {
+            total: dataPpr.totalElements,
+            plans: dataPpr.content.map((p: any) => {
+              return {
+                libelle: p.libPpr,
+                risque: 'Inondation',
+                commune: '',
+                date: p.dateModification && format(parse(p.dateModification, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          }
+        };
+      } else {
+        const params = new URLSearchParams({
+          latlon: `${longitude},${latitude}`,
+          rayon: '5000',
+          page_size: '1000'
+        });
+        const dataTri: any = await callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] });
+        const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
+        const dataPapi: any = await callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] });
+        const dataPpr: any = await callGeorisqueAPI('api/v1/ppr', params, { data: [] });
+        const filteredPpr = dataPpr.data
+          .filter((p: any) => p.risque.code_risque === '11'); // Inondation
+        return {
+          tri: {
+            total: dataTri.data.length,
+            zones: dataTri.data.map((z: any) => {
+              return {
+                libelle: z.libelle_tri,
+                risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+                code_insee: z.code_insee,
+                commune: z.libelle_commune,
+                date: z.date_arrete_pcb && format(parse(z.date_arrete_pcb, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          azi: {
+            total: dataAzi.data.length,
+            zones: dataAzi.data.map((z: any) => {
+              return {
+                libelle: z.libelle_azi,
+                risques: z.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+                code_insee: z.code_insee,
+                commune: z.libelle_commune,
+                date: z.date_debut_information && format(parse(z.date_debut_information, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          papi: {
+            total: dataPapi.data.length,
+            programmes: dataPapi.data.map((p: any) => {
+              return {
+                libelle: p.libelle_papi,
+                risques: p.liste_libelle_risque.map((r:  any) => r.libelle_risque_long),
+                code_insee: p.code_insee,
+                commune: p.libelle_commune,
+                date: p.date_labellisation && format(parse(p.date_labellisation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          },
+          ppr: {
+            total: filteredPpr.length,
+            plans: filteredPpr.map((p: any) => {
+              return {
+                libelle: p.nom_ppr,
+                risque: p.risque.libelle_risque,
+                commune: p.libelle_commune,
+                date: p.date_approbation && format(parse(p.date_approbation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+              }
+            })
+          }
+        };
+      }
     },
     outputSchema: z
           .object({
@@ -441,6 +571,7 @@ export const RISQUES = [
                           .describe("Risque"),
                         commune: z
                           .string()
+                          .optional()
                           .describe("Nom de la commune concernée"),
                         date: z
                           .iso.date()
@@ -517,6 +648,7 @@ export const RISQUES = [
     code: 'catnat',
     libelle: 'Catastrophes naturelles (CatNat)',
     fetch: async (longitude: number, latitude: number) => {
+      // API Géorisques v2 indisponible : on utilise toujours l'endpoint v1
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
         rayon: '5000',
@@ -585,34 +717,67 @@ export const RISQUES = [
     code: 'icpe',
     libelle: 'Installations classées pour la protection de l\'environnement (ICPE)',
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        latlon: `${longitude},${latitude}`,
-        rayon: '5000',
-        page_size: '1000'
-      });
-      const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
-      const seveso = data.data
-        .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
-      return {
-        total: seveso.length,
-        installations: seveso.map((i: any) => {
-          let seveso = 'non_seveso';
-          switch (i.statutSeveso) {
-            case 'Seveso seuil haut':
-              seveso = 'seveso_seuil_haut';
-              break;
-            case 'Seveso seuil bas':
-              seveso = 'seveso_seuil_bas';
-              break;
-          }
-          return {
-            raisonSociale: i.raisonSociale,
-            seveso,
-            longitude: i.longitude,
-            latitude: i.latitude
-          }
-        })
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          pageSize: '1000',
+        });
+        const data: any = await callGeorisqueAPI('api/v2/installations_classees', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const seveso = data.content
+          .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
+        return {
+          total: seveso.length,
+          installations: seveso.map((i: any) => {
+            let seveso = 'non_seveso';
+            switch (i.statutSeveso) {
+              case 'Seveso seuil haut':
+                seveso = 'seveso_seuil_haut';
+                break;
+              case 'Seveso seuil bas':
+                seveso = 'seveso_seuil_bas';
+                break;
+            }
+            return {
+              raisonSociale: i.raisonSociale,
+              seveso,
+              longitude: i.longitude,
+              latitude: i.latitude
+            }
+          })
+        };
+      } else {
+        const params = new URLSearchParams({
+          latlon: `${longitude},${latitude}`,
+          rayon: '5000',
+          page_size: '1000'
+        });
+        const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
+        const seveso = data.data
+          .filter((i: any) => i.statutSeveso && i.statutSeveso !== 'Non Seveso');
+        return {
+          total: seveso.length,
+          installations: seveso.map((i: any) => {
+            let seveso = 'non_seveso';
+            switch (i.statutSeveso) {
+              case 'Seveso seuil haut':
+                seveso = 'seveso_seuil_haut';
+                break;
+              case 'Seveso seuil bas':
+                seveso = 'seveso_seuil_bas';
+                break;
+            }
+            return {
+              raisonSociale: i.raisonSociale,
+              seveso,
+              longitude: i.longitude,
+              latitude: i.latitude
+            }
+          })
+        };
+      }
     },
     outputSchema: z
           .object({
@@ -718,23 +883,46 @@ export const RISQUES = [
     code: 'installations_nucleaires',
     libelle: 'Installations nucléaires',
     fetch: async (longitude: number, latitude: number) => {
-      const params = new URLSearchParams({
-        longitude: `${longitude}`,
-        latitude: `${latitude}`
-      });
-      const data: any = await callGeorisqueAPI('api/v1/installations_nucleaires', params, []);
-      return {
-        total: data.length,
-        installations: data.map((i: any) => {
-          return {
-            nom: i.nomInstallationNucleaire,
-            type: i.typeInstallationNucleaire,
-            rayon_ppi: i.ppi && i.rayon_ppi,
-            longitude: i.longitude,
-            latitude: i.latitude
-          }
-        })
-      };
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          pageSize: '1000',
+        });
+        const data: any = await callGeorisqueAPI('api/v2/installations_nucleaires', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        return {
+          total: data.totalElements,
+          installations: data.content.map((i: any) => {
+            return {
+              nom: i.nomInstallationNucleaire,
+              type: i.typeInstallationNucleaire,
+              rayon_ppi: i.ppi && i.rayonPpi,
+              longitude: i.longitude,
+              latitude: i.latitude
+            }
+          })
+        };
+      } else {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`
+        });
+        const data: any = await callGeorisqueAPI('api/v1/installations_nucleaires', params, []);
+        return {
+          total: data.length,
+          installations: data.map((i: any) => {
+            return {
+              nom: i.nomInstallationNucleaire,
+              type: i.typeInstallationNucleaire,
+              rayon_ppi: i.ppi && i.rayon_ppi,
+              longitude: i.longitude,
+              latitude: i.latitude
+            }
+          })
+        };
+      }
     },
     outputSchema: z
           .object({

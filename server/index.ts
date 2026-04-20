@@ -97,6 +97,10 @@ app.delete("/mcp", async (req: Request, res: Response) => {
 // Lancement du serveur HTTP
 app.listen(PORT, () => {
   console.log(`Serveur MCP risques-majeurs (Streamable HTTP) sur http://localhost:${PORT}/mcp`);
+  // API Géorisques v2 si le jeton est configuré
+  if (process.env.API_V2_TOKEN) {
+    console.log(`Jeton configuré : le serveur MCP interrogera les endpoints v2 de l'API Géorisques lorsqu'ils sont disponibles`);
+  }
 });
 
 // Arrêt propre : fermer tous les transports

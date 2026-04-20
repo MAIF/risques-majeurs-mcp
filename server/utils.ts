@@ -7,9 +7,10 @@ export const sanitize = (str: string): string => {
     .replace(/'/g, '&#x27;');
 }
 
-export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any) => {
+export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any, token: string = '') => {
   const url = `https://georisques.gouv.fr/${path}?${params}`;
-  const response = await fetch(url);
+  const headers: any = token ? { 'Authorization': 'Bearer ' + token } : {};
+  const response = await fetch(url, { headers });
   if (!response.ok) {
     throw new Error(`Erreur lors de l'appel à l'API Géorisques '${path}' : ${response.status} ${response.statusText}`);
   }
