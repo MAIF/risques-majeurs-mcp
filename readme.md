@@ -87,7 +87,20 @@ Pour connecter ce serveur à un client MCP, ajoutez-le dans votre configuration 
 
 ## Transport
 
-Le serveur utilise le transport [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http) en mode **stateless** : chaque requête est indépendante et aucun identifiant de session n'est généré. Tous les outils exposés étant en lecture seule et idempotents, il n'y a pas besoin de maintenir un état entre les requêtes.
+Le serveur supporte deux transports MCP :
+
+- **Streamable HTTP** (par défaut) — [spec](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http). Mode **stateless** : chaque requête est indépendante et aucun identifiant de session n'est généré. Tous les outils exposés étant en lecture seule et idempotents, il n'y a pas besoin de maintenir un état entre les requêtes.
+- **stdio** — pour les clients qui lancent le serveur comme sous-processus (Claude Desktop, Codex CLI, etc.). Activé via le flag `--stdio` (ou la variable d'environnement `MCP_TRANSPORT=stdio`) :
+
+```bash
+npm run start-stdio
+# ou en mode dev avec hot-reload
+npm run start-dev-stdio
+# ou directement
+node dist/index.js --stdio
+```
+
+En mode stdio, le serveur n'écoute pas sur HTTP ; toute la communication passe par stdin/stdout. Les logs sont redirigés vers stderr pour ne pas corrompre le flux JSON-RPC.
 
 ## Architecture
 
