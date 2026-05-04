@@ -44,3 +44,13 @@ run = "cd documentation && npm install && npm run build && rm -rf ../docs && cp 
 description = "Start server in production mode (watch)"
 depends = ["build"]
 run = "npm start"
+
+[tasks."dev:stdio"]
+description = "Start server in development mode using stdio transport"
+depends = ["install"]
+run = "npm run start-dev-stdio"
+
+[tasks."start:stdio"]
+description = "Start server in production mode using stdio transport"
+depends = ["build"]
+run = "npm run start-stdio"
