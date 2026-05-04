@@ -39,24 +39,48 @@ L'outil `carte_exposition_risques` inclut une application web embarquée (MCP Ap
 
 - [Node.js](https://nodejs.org/) >= 24 (ou utilisez [mise](https://mise.jdx.dev/) pour installer la bonne version automatiquement)
 
-## Installation
-
-```bash
-npm install
-```
-
 ## Utilisation
 
-### Développement
+### Sans installation locale (via `npx`)
+
+Le moyen le plus rapide de connecter le serveur a un client MCP est de le lancer en stdio directement depuis GitHub :
+
+```bash
+npx -y github:MAIF/risques-majeurs-mcp --stdio
+```
+
+Au premier appel, npx clone le repo, installe les dependances et execute le build (`tsc` + `vite`) via le script `prepare`. Les appels suivants reutilisent le cache de npx.
+
+Configuration MCP correspondante :
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "npx",
+      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+    }
+  }
+}
+```
+
+### Installation locale
+
+```bash
+git clone https://github.com/MAIF/risques-majeurs-mcp.git
+cd risques-majeurs-mcp
+npm install   # installe + build automatique via le script `prepare`
+```
+
+### Développement (HTTP avec hot-reload)
 
 ```bash
 npm run start-dev
 ```
 
-### Production
+### Production (HTTP)
 
 ```bash
-npm run build
 npm start
 ```
 
