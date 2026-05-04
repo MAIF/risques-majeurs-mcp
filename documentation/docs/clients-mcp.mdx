@@ -8,14 +8,15 @@ description: Configurer Risques Majeurs MCP dans Claude, Claude Code, OpenAI, Co
 
 Risques Majeurs MCP supporte **deux modes de connexion** :
 
-- **Streamable HTTP** (par defaut) — le serveur ecoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter.
-- **stdio** — le client lance le serveur comme sous-processus et communique via stdin/stdout. Active avec le flag `--stdio`.
+- **stdio** — le client lance le serveur comme sous-processus et communique via stdin/stdout. C'est le mode le plus simple : avec `npx github:MAIF/risques-majeurs-mcp`, aucune installation locale n'est requise.
+- **Streamable HTTP** — le serveur ecoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter. Pratique en developpement (hot-reload) ou pour partager une instance entre plusieurs clients.
 
 Selon le client, l'un ou l'autre est plus simple. Cette page detaille les deux pour les principales plateformes IA.
 
 :::tip
-- En **HTTP** : lancez d'abord le serveur (`npm run start-dev` ou `mise run dev`) puis configurez l'URL dans votre client.
-- En **stdio** : il suffit d'indiquer la commande au client, qui se charge de lancer le processus.
+- En **stdio via `npx`** : la commande clone, installe et build le serveur a la volee. Premier appel ≈ 5 s, ensuite c'est instantane (cache npx).
+- En **stdio via chemin local** : utile si vous developpez sur le projet (clone + `npm install`, puis pointez vers `dist/index.js`).
+- En **HTTP** : lancez d'abord le serveur (`npm run start-dev`), puis configurez l'URL dans votre client.
 :::
 
 ## Claude Desktop
@@ -28,9 +29,24 @@ Editez le fichier de configuration :
 - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux** : `~/.config/Claude/claude_desktop_config.json`
 
-### En stdio (recommande)
+### En stdio via npx (recommande)
 
-Claude Desktop lance le serveur comme sous-processus, pas besoin de le demarrer separement :
+Claude Desktop lance le serveur comme sous-processus, sans installation locale :
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "npx",
+      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+    }
+  }
+}
+```
+
+### En stdio depuis un clone local
+
+Si vous developpez sur le projet, pointez vers `dist/index.js` (apres `npm install` qui declenche automatiquement le build) :
 
 ```json
 {
@@ -42,8 +58,6 @@ Claude Desktop lance le serveur comme sous-processus, pas besoin de le demarrer 
   }
 }
 ```
-
-Pensez a builder le projet une fois (`npm run build`) avant de pointer vers `dist/index.js`.
 
 ### En HTTP
 
@@ -65,16 +79,22 @@ Redemarrez Claude Desktop pour que la connexion soit prise en compte. Les outils
 
 CLI d'Anthropic pour les developpeurs.
 
+### En stdio via npx (recommande)
+
+```bash
+claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio
+```
+
+### En stdio depuis un clone local
+
+```bash
+claude mcp add risques-majeurs -- node /chemin/absolu/vers/risques-majeurs-mcp/dist/index.js --stdio
+```
+
 ### En HTTP
 
 ```bash
 claude mcp add risques-majeurs http://localhost:3000/mcp --transport http
-```
-
-### En stdio
-
-```bash
-claude mcp add risques-majeurs -- node /chemin/absolu/vers/risques-majeurs-mcp/dist/index.js --stdio
 ```
 
 Verifiez ensuite avec :
@@ -123,9 +143,17 @@ Si vous integrez le serveur directement dans une application via l'API OpenAI, u
 
 L'agent CLI [Codex](https://github.com/openai/codex) d'OpenAI configure ses serveurs MCP dans `~/.codex/config.toml`.
 
-### En stdio (recommande)
+### En stdio via npx (recommande)
 
 Codex supporte nativement le transport stdio :
+
+```toml
+[mcp_servers.risques-majeurs]
+command = "npx"
+args = ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+```
+
+### En stdio depuis un clone local
 
 ```toml
 [mcp_servers.risques-majeurs]
@@ -186,7 +214,20 @@ Pour un usage programmatique avec l'API Agents de Mistral, declarez le serveur M
 
 Le [Gemini CLI](https://github.com/google-gemini/gemini-cli) de Google supporte MCP via le fichier `~/.gemini/settings.json` (configuration utilisateur) ou `.gemini/settings.json` (configuration projet).
 
-### En stdio
+### En stdio via npx (recommande)
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "npx",
+      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+    }
+  }
+}
+```
+
+### En stdio depuis un clone local
 
 ```json
 {
