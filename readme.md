@@ -19,15 +19,17 @@ Le serveur expose 4 outils MCP :
 
 ### Risques couverts
 
-| Code | Risque | Source API Géorisques |
-|---|---|---|
-| `argiles` | Retrait-gonflement des argiles | `/api/v1/rga` |
-| `mouvement_terrain` | Mouvements de terrain | `/api/v1/mvt` |
-| `cavites` | Cavités souterraines | `/api/v1/cavites` |
-| `inondations` | Inondations (TRI, AZI, PAPI, PPRN) | `/api/v1/gaspar/tri`, `azi`, `papi`, `/api/v1/ppr` |
-| `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` |
-| `icpe` | Installations classées Seveso (ICPE) | `/api/v1/installations_classees` |
-| `installations_nucleaires` | Installations nucléaires | `/api/v1/installations_nucleaires` |
+| Code | Risque | Source API Géorisques (v1) | Source API Géorisques (v2) |
+|---|---|---|---|
+| `argiles` | Retrait-gonflement des argiles | `/api/v1/rga` | `/api/v2/rga` |
+| `mouvement_terrain` | Mouvements de terrain | `/api/v1/mvt` | `/api/v2/mvt` |
+| `cavites` | Cavités souterraines | `/api/v1/cavites` | `/api/v2/cavites` |
+| `inondations` | Inondations (TRI, AZI, PAPI, PPRN) | `/api/v1/gaspar/tri`, `azi`, `papi`, `/api/v1/ppr` | `/api/v2/gaspar/tri`, `azi`, `papi`, `pprn` |
+| `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` | — |
+| `icpe` | Installations classées Seveso (ICPE) | `/api/v1/installations_classees` | `/api/v2/installations_classees` |
+| `installations_nucleaires` | Installations nucléaires | `/api/v1/installations_nucleaires` | `/api/v2/installations_nucleaires` |
+
+Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKEN` est configurée (jeton d'authentification Géorisques). Sinon, les endpoints v1 publics sont utilisés.
 
 ### Carte interactive
 
@@ -35,7 +37,7 @@ L'outil `carte_exposition_risques` inclut une application web embarquée (MCP Ap
 
 ## Prérequis
 
-- [Node.js](https://nodejs.org/) >= 20
+- [Node.js](https://nodejs.org/) >= 24 (ou utilisez [mise](https://mise.jdx.dev/) pour installer la bonne version automatiquement)
 
 ## Installation
 
@@ -110,4 +112,4 @@ client/
 
 ## Licence
 
-Ce projet est distribué sous licence [Apache 2.0](./license).
+Ce projet est distribué sous licence [Apache 2.0](./LICENSE).

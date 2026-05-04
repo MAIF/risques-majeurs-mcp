@@ -1,0 +1,130 @@
+---
+sidebar_position: 3
+title: Jeton API Georisques v2
+description: Comment obtenir un jeton d'authentification pour acceder aux endpoints v2 de l'API Georisques
+---
+
+# Jeton API Georisques v2
+
+L'API Georisques expose deux generations d'endpoints :
+
+- **v1** — endpoints publics, sans authentification.
+- **v2** — endpoints plus recents avec un format de reponse different et des capacites de filtrage etendues (filtres par thematique, geometries WKT, parcelles cadastrales, rayons, codes INSEE, departement, region, etc.). Ils necessitent un **jeton d'authentification**.
+
+Par defaut, le serveur Risques Majeurs MCP utilise les endpoints **v1**. Si la variable d'environnement `API_V2_TOKEN` est definie, il bascule automatiquement sur les endpoints **v2** (lorsqu'ils sont disponibles pour le risque concerne).
+
+:::note
+Le risque `catnat` (catastrophes naturelles) n'a pas d'equivalent v2 a ce jour : l'endpoint v1 est toujours utilise pour ce risque, meme si un jeton est configure.
+:::
+
+## Pourquoi passer a la v2 ?
+
+Configurer un jeton et basculer sur les endpoints v2 apporte plusieurs benefices concrets :
+
+### Donnees plus riches et a jour
+
+- **Generation maintenue activement** par le Ministere de la Transition Ecologique. Les endpoints v1, plus anciens, sont susceptibles d'etre deprecies a moyen terme.
+- **Donnees consolidees** : la v2 expose certaines informations que la v1 ne fournit pas ou agrege moins finement (ex : liste des aleas par commune pour les zones d'inondation TRI/AZI/PAPI).
+
+### Capacites de filtrage etendues
+
+La v2 accepte des criteres geographiques et thematiques bien plus puissants que la v1 :
+
+- Filtrage par **thematique** ou code d'alea (`codesAlea`)
+- **Geometries WKT** (au-dela d'un simple point + rayon)
+- **Parcelles cadastrales**
+- **Codes INSEE**, **departement**, **region**
+
+Cote serveur MCP, cela se traduit par exemple par l'endpoint dedie `/api/v2/gaspar/pprn?codesAlea=INOND` (filtrage natif sur le risque inondation), la ou la v1 oblige a appeler l'endpoint generique `/api/v1/ppr` puis filtrer cote serveur sur `code_risque === '11'`.
+
+### Format de reponse normalise
+
+- **Pagination explicite** : toutes les listes v2 retournent `{ totalElements, content[] }`, ce qui facilite l'iteration et evite les surprises sur les gros volumes.
+- **Champs en camelCase** et **dates au format ISO 8601** (vs snake_case et `DD/MM/YYYY` en v1).
+- **Schemas plus reguliers** d'un endpoint a l'autre.
+
+### Quotas et tracabilite
+
+L'authentification permet a Georisques d'attribuer des **quotas par utilisateur** plutot que de partager un quota global anonyme : les appels authentifies sont plus stables et moins susceptibles d'etre limites en periode de forte charge.
+
+### Resume
+
+| Aspect | v1 (sans jeton) | v2 (avec jeton) |
+|---|---|---|
+| Authentification | Aucune | Jeton Bearer |
+| Maintenance | Heritee, risque de depreciation | Active |
+| Pagination | Variable selon l'endpoint | `totalElements` + `content[]` partout |
+| Filtres | Lat/lon + rayon principalement | Lat/lon, rayon, WKT, parcelles, codes INSEE, departement, region, thematique |
+| Format des dates | `DD/MM/YYYY` | ISO 8601 |
+| Endpoint PPRN inondation | `/api/v1/ppr` + filtre cote client | `/api/v2/gaspar/pprn?codesAlea=INOND` |
+| Quotas | Partages, anonymes | Par utilisateur authentifie |
+
+## Obtenir un jeton
+
+L'inscription se fait sur la page officielle [https://www.georisques.gouv.fr/inscription](https://www.georisques.gouv.fr/inscription).
+
+### Etapes
+
+1. **Se connecter** via l'un des fournisseurs d'identite acceptes :
+   - **Cerbere** (compte du Ministere de la Transition Ecologique)
+   - **FranceConnect**
+   - Ou bien creer un compte a cette etape.
+2. **Accepter les conditions generales d'utilisation** de l'API.
+3. **Generer le jeton** depuis l'interface, une fois authentifie.
+
+### Validite
+
+Le jeton est valable **un an**. Il faudra le regenerer ensuite pour continuer a appeler les endpoints v2.
+
+## Utiliser le jeton avec le serveur MCP
+
+Une fois le jeton obtenu, exposez-le au serveur via la variable d'environnement `API_V2_TOKEN` :
+
+```bash
+export API_V2_TOKEN="votre-jeton-ici"
+npm run start-dev
+```
+
+Ou en mode production :
+
+```bash
+API_V2_TOKEN="votre-jeton-ici" npm start
+```
+
+Au demarrage, un message de log confirme la prise en compte du jeton :
+
+```
+Jeton configure : le serveur MCP interrogera les endpoints v2 de l'API Georisques lorsqu'ils sont disponibles
+```
+
+### Avec mise
+
+Vous pouvez aussi declarer la variable dans un fichier `.env` ou `.envrc` (selon votre outil) ou directement avant l'invocation :
+
+```bash
+API_V2_TOKEN="votre-jeton-ici" mise run dev
+```
+
+### Avec Docker / un orchestrateur
+
+Passez la variable comme une secret/variable d'environnement classique. Le serveur ne fait aucune verification supplementaire : si la variable est definie et non vide, les endpoints v2 sont utilises.
+
+## Comment fonctionne l'aiguillage v1 / v2
+
+Pour chaque risque, la fonction `fetch` du serveur teste la presence de `process.env.API_V2_TOKEN` :
+
+- **Si le jeton est configure** : appel a l'endpoint v2 avec un en-tete `Authorization: Bearer <jeton>`.
+- **Sinon** : appel a l'endpoint v1 public, sans authentification.
+
+Le format de reponse est ensuite normalise pour que le client MCP recoive toujours la meme structure, quel que soit l'endpoint appele.
+
+## Securite
+
+- Ne committez **jamais** votre jeton dans un depot Git.
+- Considerez le jeton comme un secret personnel : il est lie a votre identite Cerbere/FranceConnect.
+- En cas de fuite, regenerez un nouveau jeton depuis l'interface Georisques (l'ancien deviendra invalide).
+
+## Ressources
+
+- [Page d'inscription Georisques](https://www.georisques.gouv.fr/inscription)
+- [Site Georisques](https://www.georisques.gouv.fr/)

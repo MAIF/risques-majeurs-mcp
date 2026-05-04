@@ -3,6 +3,7 @@ const sidebars = {
   docSidebar: [
     'introduction',
     'demarrage-rapide',
+    'api-georisques-v2',
     {
       type: 'category',
       label: 'Les outils MCP',
