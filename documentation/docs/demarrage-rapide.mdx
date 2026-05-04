@@ -8,17 +8,45 @@ description: Installer et lancer le serveur Risques Majeurs MCP en quelques minu
 
 ## Prerequisites
 
-- [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/) >= 24 (ou utilisez [mise](https://mise.jdx.dev/) pour installer la bonne version automatiquement)
 
-## Recuperer le code
+## Configurer un client MCP — la voie rapide
+
+La methode la plus simple consiste a laisser le client MCP **lancer le serveur lui-meme via `npx` directement depuis GitHub**, en stdio. Pas de clone, pas de `npm install`, pas de build manuel : npm s'en charge.
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "npx",
+      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+    }
+  }
+}
+```
+
+Pour **Claude Code** :
+
+```bash
+claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio
+```
+
+:::tip
+Au premier lancement, npx clone le repo, installe les dependances et execute le build (`tsc` + `vite`) — comptez quelques secondes. Les appels suivants reutilisent le cache de npx, donc le demarrage est instantane.
+:::
+
+C'est le mode recommande pour la plupart des utilisateurs. Si vous voulez modifier le code ou developper sur le projet, suivez plutot le parcours ci-dessous.
+
+## Installation locale (pour developpement)
+
+### Recuperer le code
 
 ```bash
 git clone https://github.com/MAIF/risques-majeurs-mcp.git
 cd risques-majeurs-mcp
 ```
 
-## Installation
+### Installer et builder
 
 ```bash
 npm install
@@ -30,27 +58,11 @@ Ou avec mise :
 mise run install
 ```
 
-## Builder le projet
+:::note
+Le script `prepare` declenche automatiquement un build apres `npm install`. Le projet est donc pret a l'emploi sans etape supplementaire.
+:::
 
-```bash
-npm run build
-```
-
-Ou avec mise :
-
-```bash
-mise run build
-```
-
-Le build genere `dist/index.js` (serveur) et `dist/client/mcp-app.html` (carte).
-
-## Configurer un client MCP
-
-Le moyen le plus simple est de laisser le client MCP **lancer le serveur lui-meme via stdio** : pas de serveur a demarrer en parallele, pas de port a ouvrir.
-
-### Avec stdio (recommande)
-
-Ajoutez le serveur dans la configuration de votre client MCP, en pointant vers le fichier `dist/index.js` avec le flag `--stdio` :
+### Configurer le client en stdio (chemin local)
 
 ```json
 {
@@ -63,17 +75,9 @@ Ajoutez le serveur dans la configuration de votre client MCP, en pointant vers l
 }
 ```
 
-Ce format est accepte par **Claude Desktop**, **Gemini CLI**, **Codex CLI** (en TOML), et la plupart des clients MCP.
+### Configurer le client en HTTP (avec hot-reload)
 
-Pour **Claude Code** :
-
-```bash
-claude mcp add risques-majeurs -- node /chemin/absolu/vers/risques-majeurs-mcp/dist/index.js --stdio
-```
-
-### Avec HTTP (alternative)
-
-Si vous preferez lancer le serveur a la main (utile en developpement avec hot-reload, ou pour exposer le serveur a plusieurs clients), demarrez-le d'abord :
+Lancez le serveur :
 
 ```bash
 npm run start-dev    # dev avec hot-reload
@@ -101,7 +105,7 @@ claude mcp add risques-majeurs http://localhost:3000/mcp --transport http
 
 ### Plus de details
 
-La page [**Connecter un client IA**](./clients-mcp) detaille la configuration des deux modes pour chaque plateforme : Claude Desktop, Claude Code, ChatGPT, Codex CLI, Mistral Le Chat, Gemini CLI, Cursor, Cline, Continue, Zed…
+La page [**Connecter un client IA**](./clients-mcp) detaille la configuration pour chaque plateforme : Claude Desktop, Claude Code, ChatGPT, Codex CLI, Mistral Le Chat, Gemini CLI, Cursor, Cline, Continue, Zed…
 
 ## Verifier que ca fonctionne
 
