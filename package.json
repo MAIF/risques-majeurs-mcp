@@ -16,7 +16,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.server.json && cross-env INPUT=client/mcp-app.html vite build",
     "start-dev": "concurrently \"tsx watch server/index.ts\" \"cross-env NODE_ENV=development INPUT=client/mcp-app.html vite build --watch\"",
+    "start-dev-stdio": "tsx watch server/index.ts --stdio",
     "start": "concurrently \"tsx watch server/index.ts\" \"cross-env INPUT=client/mcp-app.html vite build --watch\"",
+    "start-stdio": "node dist/index.js --stdio",
     "test": "vitest run",
     "prepublishOnly": "npm run build && npm test"
   },
