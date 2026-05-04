@@ -54,3 +54,7 @@ run = "npm run start-dev-stdio"
 description = "Start server in production mode using stdio transport"
 depends = ["build"]
 run = "npm run start-stdio"
+
+[tasks."mcp:inspect"]
+description = "Launch the MCP inspector against the local MCP server"
+run = "npx @modelcontextprotocol/inspector"
