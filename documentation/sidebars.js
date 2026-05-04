@@ -3,6 +3,7 @@ const sidebars = {
   docSidebar: [
     'introduction',
     'demarrage-rapide',
+    'clients-mcp',
     'api-georisques-v2',
     {
       type: 'category',

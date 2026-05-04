@@ -53,13 +53,12 @@ mise run start
 
 ## Configurer un client MCP
 
-Une fois le serveur lance, ajoutez-le dans la configuration de votre client MCP.
+Une fois le serveur lance, ajoutez-le dans la configuration de votre client MCP. Le serveur ecoute sur `http://localhost:3000/mcp` (transport **Streamable HTTP**).
 
-### Claude Desktop
-
-Editez le fichier de configuration de Claude Desktop et ajoutez :
+Configurations rapides :
 
 ```json
+// Claude Desktop, Gemini CLI, etc.
 {
   "mcpServers": {
     "risques-majeurs": {
@@ -69,17 +68,12 @@ Editez le fichier de configuration de Claude Desktop et ajoutez :
 }
 ```
 
-### Claude Code
-
-Ajoutez le serveur avec la commande :
-
 ```bash
-claude mcp add risques-majeurs http://localhost:3000/mcp
+# Claude Code
+claude mcp add risques-majeurs http://localhost:3000/mcp --transport http
 ```
 
-### Autres clients MCP
-
-Tout client compatible avec le transport **Streamable HTTP** du protocole MCP peut se connecter a l'URL `http://localhost:3000/mcp`.
+Pour les autres clients (ChatGPT, Codex, Mistral Le Chat, Cursor, Cline, Continue, Zed…), reportez-vous a la page [**Connecter un client IA**](./clients-mcp) qui detaille la configuration plateforme par plateforme.
 
 ## Verifier que ca fonctionne
 
