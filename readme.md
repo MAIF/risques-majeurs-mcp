@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Risques Majeurs MCP" width="200">
+  <img src="resources/logo.png" alt="Risques Majeurs MCP" width="200">
 </p>
 
 # Risques Majeurs MCP
