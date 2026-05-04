@@ -6,12 +6,16 @@ description: Configurer Risques Majeurs MCP dans Claude, Claude Code, OpenAI, Co
 
 # Connecter un client IA
 
-Risques Majeurs MCP expose un endpoint **Streamable HTTP** sur `http://localhost:3000/mcp` (par defaut). Tout client compatible avec le protocole MCP peut s'y connecter.
+Risques Majeurs MCP supporte **deux modes de connexion** :
 
-Cette page detaille la configuration pour les principales plateformes IA. Pour chacune, l'URL a renseigner est la meme — seul le format de configuration change.
+- **Streamable HTTP** (par defaut) — le serveur ecoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter.
+- **stdio** — le client lance le serveur comme sous-processus et communique via stdin/stdout. Active avec le flag `--stdio`.
+
+Selon le client, l'un ou l'autre est plus simple. Cette page detaille les deux pour les principales plateformes IA.
 
 :::tip
-Lancez d'abord le serveur MCP en local avec `npm run start-dev` ou `mise run dev`. Ouvrez ensuite la configuration de votre client IA et ajoutez la connexion comme indique ci-dessous.
+- En **HTTP** : lancez d'abord le serveur (`npm run start-dev` ou `mise run dev`) puis configurez l'URL dans votre client.
+- En **stdio** : il suffit d'indiquer la commande au client, qui se charge de lancer le processus.
 :::
 
 ## Claude Desktop
@@ -23,6 +27,27 @@ Editez le fichier de configuration :
 - **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux** : `~/.config/Claude/claude_desktop_config.json`
+
+### En stdio (recommande)
+
+Claude Desktop lance le serveur comme sous-processus, pas besoin de le demarrer separement :
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "node",
+      "args": ["/chemin/absolu/vers/risques-majeurs-mcp/dist/index.js", "--stdio"]
+    }
+  }
+}
+```
+
+Pensez a builder le projet une fois (`npm run build`) avant de pointer vers `dist/index.js`.
+
+### En HTTP
+
+Si vous preferez lancer le serveur a la main (utile en developpement avec hot-reload) :
 
 ```json
 {
@@ -40,8 +65,16 @@ Redemarrez Claude Desktop pour que la connexion soit prise en compte. Les outils
 
 CLI d'Anthropic pour les developpeurs.
 
+### En HTTP
+
 ```bash
 claude mcp add risques-majeurs http://localhost:3000/mcp --transport http
+```
+
+### En stdio
+
+```bash
+claude mcp add risques-majeurs -- node /chemin/absolu/vers/risques-majeurs-mcp/dist/index.js --stdio
 ```
 
 Verifiez ensuite avec :
@@ -90,7 +123,17 @@ Si vous integrez le serveur directement dans une application via l'API OpenAI, u
 
 L'agent CLI [Codex](https://github.com/openai/codex) d'OpenAI configure ses serveurs MCP dans `~/.codex/config.toml`.
 
-Pour un serveur HTTP distant, ajoutez une section `[mcp_servers.<name>]` :
+### En stdio (recommande)
+
+Codex supporte nativement le transport stdio :
+
+```toml
+[mcp_servers.risques-majeurs]
+command = "node"
+args = ["/chemin/absolu/vers/risques-majeurs-mcp/dist/index.js", "--stdio"]
+```
+
+### En HTTP
 
 ```toml
 [mcp_servers.risques-majeurs]
@@ -98,7 +141,7 @@ url = "http://localhost:3000/mcp"
 ```
 
 :::note
-Le support HTTP pour MCP est en evolution dans Codex. Si la version installee ne le prend pas encore en charge directement, vous pouvez utiliser un proxy stdio→HTTP (ex : `mcp-remote` via `npx`) :
+Le support HTTP pour MCP est en evolution dans Codex. Si la version installee ne le prend pas encore en charge directement, utilisez plutot la configuration stdio ci-dessus, ou un proxy stdio→HTTP (ex : `mcp-remote` via `npx`) :
 
 ```toml
 [mcp_servers.risques-majeurs]
@@ -141,7 +184,22 @@ Pour un usage programmatique avec l'API Agents de Mistral, declarez le serveur M
 
 ## Gemini CLI
 
-Le [Gemini CLI](https://github.com/google-gemini/gemini-cli) de Google supporte MCP via le fichier `~/.gemini/settings.json` (configuration utilisateur) ou `.gemini/settings.json` (configuration projet) :
+Le [Gemini CLI](https://github.com/google-gemini/gemini-cli) de Google supporte MCP via le fichier `~/.gemini/settings.json` (configuration utilisateur) ou `.gemini/settings.json` (configuration projet).
+
+### En stdio
+
+```json
+{
+  "mcpServers": {
+    "risques-majeurs": {
+      "command": "node",
+      "args": ["/chemin/absolu/vers/risques-majeurs-mcp/dist/index.js", "--stdio"]
+    }
+  }
+}
+```
+
+### En HTTP
 
 ```json
 {
