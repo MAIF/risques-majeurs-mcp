@@ -129,4 +129,5 @@ Essayez par exemple de demander a votre assistant :
 | `CORS_ORIGIN` | Origine autorisee pour les requetes CORS | `*` |
 | `RATE_LIMIT_WINDOW_MS` | Fenetre de temps du rate limiting (en ms) | `60000` |
 | `RATE_LIMIT_MAX` | Nombre max de requetes par fenetre par IP | `100` |
+| `TRUST_PROXY` | Configure Express `trust proxy` (`true`, `false`, un nombre de sauts, `loopback`, une IP ou un CIDR). Necessaire derriere un reverse-proxy (nginx, ngrok, Cloudflare…) pour que le rate-limit identifie correctement l'IP client | — |
 | `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés) | — |

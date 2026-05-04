@@ -43,6 +43,7 @@ run = "cd documentation && npm install && npm run build && rm -rf ../docs && cp 
 [tasks.start]
 description = "Start server in production mode (watch)"
 depends = ["build"]
+env = { TRUST_PROXY = "1" }
 run = "npm start"
 
 [tasks."dev:stdio"]

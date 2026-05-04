@@ -93,6 +93,7 @@ Le serveur démarre sur `http://localhost:3000/mcp` et peut être configuré via
 | `CORS_ORIGIN` | Origine autorisée pour les requêtes CORS | `*` |
 | `RATE_LIMIT_WINDOW_MS` | Fenêtre de temps du rate limiting (en ms) | `60000` |
 | `RATE_LIMIT_MAX` | Nombre max de requêtes par fenêtre par IP | `100` |
+| `TRUST_PROXY` | Configure Express `trust proxy` (`true`, `false`, un nombre de sauts, `loopback`, une IP ou un CIDR). Nécessaire derrière un reverse-proxy (nginx, ngrok, Cloudflare…) pour que le rate-limit identifie correctement l'IP client | — |
 | `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés) | `` |
 
 ### Configuration MCP

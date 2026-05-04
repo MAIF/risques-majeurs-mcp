@@ -46,6 +46,22 @@ function runHttp() {
   const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
   const app = createMcpExpressApp({host: HOST});
 
+  // Express 'trust proxy' setting — required when running behind a reverse
+  // proxy (nginx, ngrok, Cloudflare…) so express-rate-limit can identify the
+  // real client IP from X-Forwarded-For instead of always seeing the proxy.
+  // Accepted values: "true", "false", a number of hops (e.g. "1"), or a
+  // specific value like "loopback" / an IP / a CIDR.
+  const trustProxyRaw = process.env.TRUST_PROXY;
+  if (trustProxyRaw !== undefined) {
+    const asInt = parseInt(trustProxyRaw, 10);
+    let trustProxy: boolean | number | string;
+    if (trustProxyRaw === 'true') trustProxy = true;
+    else if (trustProxyRaw === 'false') trustProxy = false;
+    else if (!Number.isNaN(asInt) && String(asInt) === trustProxyRaw) trustProxy = asInt;
+    else trustProxy = trustProxyRaw;
+    app.set('trust proxy', trustProxy);
+  }
+
   app.use(
     cors({ origin: CORS_ORIGIN }),
   );
