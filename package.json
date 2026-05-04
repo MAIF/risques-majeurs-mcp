@@ -20,6 +20,7 @@
     "start": "concurrently \"tsx watch server/index.ts\" \"cross-env INPUT=client/mcp-app.html vite build --watch\"",
     "start-stdio": "node dist/index.js --stdio",
     "test": "vitest run",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
