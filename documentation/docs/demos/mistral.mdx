@@ -1,0 +1,111 @@
+---
+sidebar_position: 3
+title: Ajouter le serveur à Le Chat (Mistral)
+description: Demonstration video et procedure pas a pas pour connecter Risques Majeurs MCP a Mistral Le Chat
+---
+
+# Demo : ajouter Risques Majeurs MCP à Mistral Le Chat
+
+Cette page montre comment connecter le serveur **Risques Majeurs MCP** a **[Le Chat](https://chat.mistral.ai/)** de Mistral AI via un connecteur MCP, et l'utiliser pour interroger l'exposition aux risques d'une adresse en France.
+
+## Video
+
+<video controls width="100%" preload="metadata">
+  <source src="/videos/demo-mistral.mp4" type="video/mp4" />
+  Votre navigateur ne supporte pas la lecture video. Vous pouvez [telecharger la video](/videos/demo-mistral.mp4).
+</video>
+
+## Procedure
+
+Le Chat s'execute dans le cloud et ne peut pas atteindre un serveur sur `localhost`. Il faut donc :
+
+1. **Lancer le serveur** localement.
+2. **Exposer le serveur** via un tunnel HTTPS public.
+3. **Ajouter le connecteur** dans Le Chat.
+4. **Tester** depuis une conversation.
+
+### 1. Lancer le serveur en HTTP
+
+Depuis le repo cloné :
+
+```bash
+npm install   # si pas deja fait
+npm start
+```
+
+Le serveur ecoute sur `http://localhost:3000/mcp`.
+
+### 2. Exposer le serveur via un tunnel HTTPS
+
+Le Chat exige une URL HTTPS publique. Utilisez par exemple [ngrok](https://ngrok.com/) ou [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) :
+
+```bash
+# Avec ngrok
+ngrok http 3000
+
+# Ou avec cloudflared
+cloudflared tunnel --url http://localhost:3000
+```
+
+Le tunnel renvoie une URL du type `https://xxxx.ngrok-free.app`. **L'URL du serveur MCP** est cette URL suffixee de `/mcp`, par exemple :
+
+```
+https://xxxx.ngrok-free.app/mcp
+```
+
+:::caution
+Le tunnel public expose votre serveur a Internet. Pensez a configurer la variable `TRUST_PROXY=1` (Express derriere un proxy) et a fermer le tunnel quand vous avez fini :
+
+```bash
+TRUST_PROXY=1 npm start
+```
+:::
+
+### 3. Ajouter le connecteur dans Le Chat
+
+1. Ouvrez les **parametres** de Le Chat.
+2. Section **Connectors** (ou **MCP**) : ajoutez un nouveau connecteur.
+3. Renseignez :
+   - **Nom** : `Risques Majeurs`
+   - **URL** : l'URL HTTPS publique du tunnel suffixee de `/mcp` (ex : `https://xxxx.ngrok-free.app/mcp`)
+   - **Transport** : `Streamable HTTP`
+   - **Authentication** : aucune
+4. Validez.
+
+Le Chat effectue un handshake avec le serveur et liste les 4 outils disponibles : `geocodage`, `liste_risques`, `exposition_risques`, `carte_exposition_risques`.
+
+### 4. Tester depuis une conversation
+
+Dans une nouvelle conversation, activez le connecteur **Risques Majeurs**, puis posez une question :
+
+> *"Quels sont les risques majeurs au 1 place de la Comedie a Montpellier ?"*
+
+Le Chat enchaine automatiquement les appels :
+
+1. `geocodage` — convertit l'adresse en coordonnees GPS et code INSEE.
+2. `exposition_risques` — recupere le niveau d'exposition pour chaque risque.
+3. (optionnel) `carte_exposition_risques` — affiche la carte interactive.
+
+## Via l'API Mistral Agents
+
+Pour un usage programmatique avec l'API Agents de Mistral, declarez le serveur MCP dans la configuration de l'agent :
+
+```json
+{
+  "model": "mistral-large-latest",
+  "tools": [
+    {
+      "type": "mcp",
+      "server_url": "https://votre-domaine-public/mcp",
+      "server_label": "risques-majeurs"
+    }
+  ]
+}
+```
+
+## Aller plus loin
+
+- Page [Demo — ajouter le serveur a ChatGPT](./chatgpt) — meme exercice avec ChatGPT.
+- Page [Connecter un client IA](../clients-mcp) — configurations pour les autres plateformes (Claude, Codex, Gemini…).
+- Page [Outils MCP](../outils/) — detail des 4 outils exposes par le serveur.
+- Page [Jeton API Georisques v2](../api-georisques-v2) — pour beneficier des endpoints v2 (donnees plus riches, quotas par utilisateur).

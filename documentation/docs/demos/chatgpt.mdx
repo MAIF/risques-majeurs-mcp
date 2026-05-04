@@ -1,0 +1,96 @@
+---
+sidebar_position: 2
+title: Ajouter le serveur à ChatGPT
+description: Demonstration video et procedure pas a pas pour connecter Risques Majeurs MCP a ChatGPT
+---
+
+# Demo : ajouter Risques Majeurs MCP à ChatGPT
+
+Cette page montre comment connecter le serveur **Risques Majeurs MCP** a **ChatGPT** via un connecteur MCP, et l'utiliser pour interroger l'exposition aux risques d'une adresse en France.
+
+## Video
+
+<video controls width="100%" preload="metadata">
+  <source src="/videos/demo-chatgpt.mp4" type="video/mp4" />
+  Votre navigateur ne supporte pas la lecture video. Vous pouvez [telecharger la video](/videos/demo-chatgpt.mp4).
+</video>
+
+## Procedure
+
+ChatGPT s'execute dans le cloud et ne peut pas atteindre un serveur sur `localhost`. Il faut donc :
+
+1. **Lancer le serveur** localement.
+2. **Exposer le serveur** via un tunnel HTTPS public.
+3. **Ajouter le connecteur** dans ChatGPT.
+4. **Tester** depuis une conversation.
+
+### 1. Lancer le serveur en HTTP
+
+Depuis le repo cloné :
+
+```bash
+npm install   # si pas deja fait
+npm start
+```
+
+Le serveur ecoute sur `http://localhost:3000/mcp`.
+
+### 2. Exposer le serveur via un tunnel HTTPS
+
+ChatGPT exige une URL HTTPS publique. Utilisez par exemple [ngrok](https://ngrok.com/) ou [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) :
+
+```bash
+# Avec ngrok
+ngrok http 3000
+
+# Ou avec cloudflared
+cloudflared tunnel --url http://localhost:3000
+```
+
+Le tunnel renvoie une URL du type `https://xxxx.ngrok-free.app`. **L'URL du serveur MCP** est cette URL suffixee de `/mcp`, par exemple :
+
+```
+https://xxxx.ngrok-free.app/mcp
+```
+
+:::caution
+Le tunnel public expose votre serveur a Internet. Pensez a configurer la variable `TRUST_PROXY=1` (Express derriere un proxy) et a fermer le tunnel quand vous avez fini :
+
+```bash
+TRUST_PROXY=1 npm start
+```
+:::
+
+### 3. Ajouter le connecteur dans ChatGPT
+
+Le support des connecteurs MCP est disponible dans ChatGPT (versions Pro / Business / Enterprise).
+
+1. Ouvrez **Settings > Connectors** (parametres > connecteurs).
+2. Cliquez sur **Add custom connector** (ou equivalent).
+3. Renseignez :
+   - **Name** : `Risques Majeurs`
+   - **URL** : l'URL HTTPS publique du tunnel suffixee de `/mcp` (ex : `https://xxxx.ngrok-free.app/mcp`)
+   - **Transport** : `Streamable HTTP` (ou `HTTP`)
+   - **Authentication** : aucune
+4. Validez.
+
+ChatGPT effectue un handshake avec le serveur et liste les 4 outils disponibles : `geocodage`, `liste_risques`, `exposition_risques`, `carte_exposition_risques`.
+
+### 4. Tester depuis une conversation
+
+Dans une nouvelle conversation, activez le connecteur **Risques Majeurs**, puis posez une question :
+
+> *"Quels sont les risques majeurs au 1 place de la Comedie a Montpellier ?"*
+
+ChatGPT enchaine automatiquement les appels :
+
+1. `geocodage` — convertit l'adresse en coordonnees GPS et code INSEE.
+2. `exposition_risques` — recupere le niveau d'exposition pour chaque risque.
+3. (optionnel) `carte_exposition_risques` — affiche la carte interactive.
+
+## Aller plus loin
+
+- Page [Demo — ajouter le serveur a Le Chat (Mistral)](./mistral) — meme exercice avec Mistral Le Chat.
+- Page [Connecter un client IA](../clients-mcp) — configurations pour les autres plateformes (Claude, Codex, Gemini…).
+- Page [Outils MCP](../outils/) — detail des 4 outils exposes par le serveur.
+- Page [Jeton API Georisques v2](../api-georisques-v2) — pour beneficier des endpoints v2 (donnees plus riches, quotas par utilisateur).

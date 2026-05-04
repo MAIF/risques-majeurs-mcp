@@ -19,6 +19,16 @@ const sidebars = {
     'risques',
     'architecture',
     'contribuer',
+    {
+      type: 'category',
+      label: 'Demos',
+      collapsed: false,
+      items: [
+        'demos/index',
+        'demos/chatgpt',
+        'demos/mistral',
+      ],
+    },
   ],
 };
 
