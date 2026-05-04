@@ -27,7 +27,17 @@ const features = [
   {
     icon: '📊',
     title: 'Open Data',
-    description: 'S\'appuie sur les API publiques de Georisques et de la Geoplateforme IGN. Donnees ouvertes, transparentes et a jour.',
+    description: (
+      <>
+        S'appuie sur les API publiques de{' '}
+        <Link href="https://www.georisques.gouv.fr/">Georisques</Link>,{' '}
+        de la{' '}
+        <Link href="https://data.geopf.fr/">Geoplateforme IGN</Link>{' '}
+        et des fonds de carte{' '}
+        <Link href="https://carto.com/">CARTO</Link>.
+        Donnees ouvertes, transparentes et a jour.
+      </>
+    ),
   },
   {
     icon: '🚀',
