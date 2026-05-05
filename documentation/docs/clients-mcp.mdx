@@ -9,13 +9,13 @@ description: Configurer Risques Majeurs MCP dans Claude, Claude Code, OpenAI, Co
 Risques Majeurs MCP supporte **deux modes de connexion** :
 
 - **stdio** — le client lance le serveur comme sous-processus et communique via stdin/stdout. C'est le mode le plus simple : avec `npx github:MAIF/risques-majeurs-mcp`, aucune installation locale n'est requise.
-- **Streamable HTTP** — le serveur ecoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter. Pratique en developpement (hot-reload) ou pour partager une instance entre plusieurs clients.
+- **Streamable HTTP** — le serveur écoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter. Pratique en développement (hot-reload) ou pour partager une instance entre plusieurs clients.
 
-Selon le client, l'un ou l'autre est plus simple. Cette page detaille les deux pour les principales plateformes IA.
+Selon le client, l'un ou l'autre est plus simple. Cette page détaille les deux pour les principales plateformes IA.
 
 :::tip
-- En **stdio via `npx`** : la commande clone, installe et build le serveur a la volee. Premier appel ≈ 5 s, ensuite c'est instantane (cache npx).
-- En **stdio via chemin local** : utile si vous developpez sur le projet (clone + `npm install`, puis pointez vers `dist/index.js`).
+- En **stdio via `npx`** : la commande clone, installé et build le serveur à la volée. Premier appel ≈ 5 s, ensuite c'est instantané (cache npx).
+- En **stdio via chemin local** : utile si vous développez sur le projet (clone + `npm install`, puis pointez vers `dist/index.js`).
 - En **HTTP** : lancez d'abord le serveur (`npm run start-dev`), puis configurez l'URL dans votre client.
 :::
 
@@ -23,13 +23,13 @@ Selon le client, l'un ou l'autre est plus simple. Cette page detaille les deux p
 
 Application de bureau d'Anthropic.
 
-Editez le fichier de configuration :
+Éditez le fichier de configuration :
 
 - **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux** : `~/.config/Claude/claude_desktop_config.json`
 
-### En stdio via npx (recommande)
+### En stdio via npx (recommandé)
 
 Claude Desktop lance le serveur comme sous-processus, sans installation locale :
 
@@ -46,7 +46,7 @@ Claude Desktop lance le serveur comme sous-processus, sans installation locale :
 
 ### En stdio depuis un clone local
 
-Si vous developpez sur le projet, pointez vers `dist/index.js` (apres `npm install` qui declenche automatiquement le build) :
+Si vous développez sur le projet, pointez vers `dist/index.js` (après `npm install` qui déclenche automatiquement le build) :
 
 ```json
 {
@@ -61,7 +61,7 @@ Si vous developpez sur le projet, pointez vers `dist/index.js` (apres `npm insta
 
 ### En HTTP
 
-Si vous preferez lancer le serveur a la main (utile en developpement avec hot-reload) :
+Si vous preferez lancer le serveur à la main (utile en développement avec hot-reload) :
 
 ```json
 {
@@ -73,13 +73,13 @@ Si vous preferez lancer le serveur a la main (utile en developpement avec hot-re
 }
 ```
 
-Redemarrez Claude Desktop pour que la connexion soit prise en compte. Les outils apparaissent dans le selecteur d'outils de la conversation.
+Redémarrez Claude Desktop pour que la connexion soit prise en compte. Les outils apparaissent dans le selecteur d'outils de la conversation.
 
 ## Claude Code
 
-CLI d'Anthropic pour les developpeurs.
+CLI d'Anthropic pour les développeurs.
 
-### En stdio via npx (recommande)
+### En stdio via npx (recommandé)
 
 ```bash
 claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio
@@ -110,7 +110,7 @@ Les 4 outils (`geocodage`, `liste_risques`, `exposition_risques`, `carte_exposit
 ChatGPT (interface web et application bureau) prend en charge les **MCP Connectors** dans les versions Pro / Business / Enterprise.
 
 1. Ouvrez **Settings > Connectors** (parametres > connecteurs).
-2. Cliquez sur **Add custom connector** (ou equivalent selon la version).
+2. Cliquez sur **Add custom connector** (ou équivalent selon la version).
 3. Renseignez :
    - **Name** : `Risques Majeurs`
    - **URL** : `https://votre-domaine-public/mcp`
@@ -118,7 +118,7 @@ ChatGPT (interface web et application bureau) prend en charge les **MCP Connecto
    - **Authentication** : aucune
 
 :::caution
-ChatGPT en version cloud ne peut **pas** atteindre un serveur MCP qui ecoute sur `localhost`. Pour un usage distant, exposez le serveur via un tunnel HTTPS (par exemple [ngrok](https://ngrok.com/), [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) ou un deploiement public) et utilisez l'URL publique a la place.
+ChatGPT en version cloud ne peut **pas** atteindre un serveur MCP qui écoute sur `localhost`. Pour un usage distant, exposez le serveur via un tunnel HTTPS (par exemple [ngrok](https://ngrok.com/), [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) ou un déploiement public) et utilisez l'URL publique à la place.
 :::
 
 ### Via l'API Responses (programmatique)
@@ -135,7 +135,7 @@ Si vous integrez le serveur directement dans une application via l'API OpenAI, u
       "server_url": "https://votre-domaine-public/mcp"
     }
   ],
-  "input": "Quels sont les risques au 20 avenue de Segur a Paris ?"
+  "input": "Quels sont les risques au 20 avenue de Segur à Paris ?"
 }
 ```
 
@@ -143,7 +143,7 @@ Si vous integrez le serveur directement dans une application via l'API OpenAI, u
 
 L'agent CLI [Codex](https://github.com/openai/codex) d'OpenAI configure ses serveurs MCP dans `~/.codex/config.toml`.
 
-### En stdio via npx (recommande)
+### En stdio via npx (recommandé)
 
 Codex supporte nativement le transport stdio :
 
@@ -169,7 +169,7 @@ url = "http://localhost:3000/mcp"
 ```
 
 :::note
-Le support HTTP pour MCP est en evolution dans Codex. Si la version installee ne le prend pas encore en charge directement, utilisez plutot la configuration stdio ci-dessus, ou un proxy stdio→HTTP (ex : `mcp-remote` via `npx`) :
+Le support HTTP pour MCP est en évolution dans Codex. Si la version installée ne le prend pas encore en charge directement, utilisez plutôt la configuration stdio ci-dessus, ou un proxy stdio→HTTP (ex : `mcp-remote` via `npx`) :
 
 ```toml
 [mcp_servers.risques-majeurs]
@@ -178,7 +178,7 @@ args = ["-y", "mcp-remote", "http://localhost:3000/mcp"]
 ```
 :::
 
-Relancez Codex : les outils sont detectes au demarrage.
+Relancez Codex : les outils sont détectés au démarrage.
 
 ## Le Chat (Mistral)
 
@@ -195,7 +195,7 @@ Comme pour ChatGPT, Le Chat en mode cloud ne peut pas atteindre `localhost` dire
 
 ### Via l'API Mistral Agents
 
-Pour un usage programmatique avec l'API Agents de Mistral, declarez le serveur MCP dans la configuration de l'agent :
+Pour un usage programmatique avec l'API Agents de Mistral, déclarez le serveur MCP dans la configuration de l'agent :
 
 ```json
 {
@@ -214,7 +214,7 @@ Pour un usage programmatique avec l'API Agents de Mistral, declarez le serveur M
 
 Le [Gemini CLI](https://github.com/google-gemini/gemini-cli) de Google supporte MCP via le fichier `~/.gemini/settings.json` (configuration utilisateur) ou `.gemini/settings.json` (configuration projet).
 
-### En stdio via npx (recommande)
+### En stdio via npx (recommandé)
 
 ```json
 {
@@ -278,11 +278,11 @@ Tout client compatible avec le transport **Streamable HTTP** du protocole MCP pe
 | [Zed](https://zed.dev/) | `~/.config/zed/settings.json` → `context_servers` |
 | Agent custom (SDK MCP) | Connexion programmatique au transport Streamable HTTP |
 
-Le format exact varie selon le client mais la **logique reste la meme** : un nom + une URL + un type de transport.
+Le format exact varie selon le client mais la **logique reste la même** : un nom + une URL + un type de transport.
 
-## Exposer le serveur a un client cloud
+## Exposer le serveur à un client cloud
 
-Les clients qui s'executent dans le cloud (ChatGPT.com, Le Chat web, etc.) ne peuvent pas atteindre `localhost`. Pour les utiliser pendant le developpement, exposez votre serveur local via un tunnel :
+Les clients qui s'exécutent dans le cloud (ChatGPT.com, Le Chat web, etc.) ne peuvent pas atteindre `localhost`. Pour les utiliser pendant le développement, exposez votre serveur local via un tunnel :
 
 ```bash
 # Avec ngrok
@@ -295,5 +295,5 @@ cloudflared tunnel --url http://localhost:3000
 Utilisez ensuite l'URL publique HTTPS retournee (suffixee de `/mcp`) dans la configuration du client.
 
 :::caution
-Un tunnel public expose votre serveur a Internet. En production, deployez le serveur sur une infrastructure dediee, configurez `CORS_ORIGIN` pour restreindre les origines autorisees, et activez le rate-limiting via les variables `RATE_LIMIT_*`.
+Un tunnel public expose votre serveur à Internet. En production, déployez le serveur sur une infrastructure dédiée, configurez `CORS_ORIGIN` pour restreindre les origines autorisees, et activez le rate-limiting via les variables `RATE_LIMIT_*`.
 :::
