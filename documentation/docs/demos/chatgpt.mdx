@@ -1,23 +1,23 @@
 ---
 sidebar_position: 2
 title: Ajouter le serveur à ChatGPT
-description: Demonstration video et procedure pas a pas pour connecter Risques Majeurs MCP a ChatGPT
+description: Démonstration vidéo et procédure pas à pas pour connecter Risques Majeurs MCP à ChatGPT
 ---
 
-# Demo : ajouter Risques Majeurs MCP à ChatGPT
+# Démo : ajouter Risques Majeurs MCP à ChatGPT
 
-Cette page montre comment connecter le serveur **Risques Majeurs MCP** a **ChatGPT** via un connecteur MCP, et l'utiliser pour interroger l'exposition aux risques d'une adresse en France.
+Cette page montre comment connecter le serveur **Risques Majeurs MCP** à **ChatGPT** via un connecteur MCP, et l'utiliser pour interroger l'exposition aux risques d'une adresse en France.
 
-## Video
+## Vidéo
 
 <video controls width="100%" preload="metadata">
   <source src="/videos/demo-chatgpt.mp4" type="video/mp4" />
-  Votre navigateur ne supporte pas la lecture video. Vous pouvez [telecharger la video](/videos/demo-chatgpt.mp4).
+  Votre navigateur ne supporte pas la lecture vidéo. Vous pouvez [télécharger la vidéo](/videos/demo-chatgpt.mp4).
 </video>
 
-## Procedure
+## Procédure
 
-ChatGPT s'execute dans le cloud et ne peut pas atteindre un serveur sur `localhost`. Il faut donc :
+ChatGPT s'exécute dans le cloud et ne peut pas atteindre un serveur sur `localhost`. Il faut donc :
 
 1. **Lancer le serveur** localement.
 2. **Exposer le serveur** via un tunnel HTTPS public.
@@ -29,11 +29,11 @@ ChatGPT s'execute dans le cloud et ne peut pas atteindre un serveur sur `localho
 Depuis le repo cloné :
 
 ```bash
-npm install   # si pas deja fait
+npm install   # si pas déjà fait
 npm start
 ```
 
-Le serveur ecoute sur `http://localhost:3000/mcp`.
+Le serveur écoute sur `http://localhost:3000/mcp`.
 
 ### 2. Exposer le serveur via un tunnel HTTPS
 
@@ -47,14 +47,14 @@ ngrok http 3000
 cloudflared tunnel --url http://localhost:3000
 ```
 
-Le tunnel renvoie une URL du type `https://xxxx.ngrok-free.app`. **L'URL du serveur MCP** est cette URL suffixee de `/mcp`, par exemple :
+Le tunnel renvoie une URL du type `https://xxxx.ngrok-free.app`. **L'URL du serveur MCP** est cette URL suffixée de `/mcp`, par exemple :
 
 ```
 https://xxxx.ngrok-free.app/mcp
 ```
 
 :::caution
-Le tunnel public expose votre serveur a Internet. Pensez a configurer la variable `TRUST_PROXY=1` (Express derriere un proxy) et a fermer le tunnel quand vous avez fini :
+Le tunnel public expose votre serveur à Internet. Pensez à configurer la variable `TRUST_PROXY=1` (Express derrière un proxy) et à fermer le tunnel quand vous avez fini :
 
 ```bash
 TRUST_PROXY=1 npm start
@@ -66,7 +66,7 @@ TRUST_PROXY=1 npm start
 Le support des connecteurs MCP est disponible dans ChatGPT (versions Pro / Business / Enterprise).
 
 1. Ouvrez **Settings > Connectors** (parametres > connecteurs).
-2. Cliquez sur **Add custom connector** (ou equivalent).
+2. Cliquez sur **Add custom connector** (ou équivalent).
 3. Renseignez :
    - **Name** : `Risques Majeurs`
    - **URL** : l'URL HTTPS publique du tunnel suffixee de `/mcp` (ex : `https://xxxx.ngrok-free.app/mcp`)
@@ -80,17 +80,17 @@ ChatGPT effectue un handshake avec le serveur et liste les 4 outils disponibles 
 
 Dans une nouvelle conversation, activez le connecteur **Risques Majeurs**, puis posez une question :
 
-> *"Quels sont les risques majeurs au 1 place de la Comedie a Montpellier ?"*
+> *"Quels sont les risques majeurs au 1 place de la Comédie à Montpellier ?"*
 
-ChatGPT enchaine automatiquement les appels :
+ChatGPT enchaîne automatiquement les appels :
 
-1. `geocodage` — convertit l'adresse en coordonnees GPS et code INSEE.
-2. `exposition_risques` — recupere le niveau d'exposition pour chaque risque.
+1. `geocodage` — convertit l'adresse en coordonnées GPS et code INSEE.
+2. `exposition_risques` — récupère le niveau d'exposition pour chaque risque.
 3. (optionnel) `carte_exposition_risques` — affiche la carte interactive.
 
 ## Aller plus loin
 
-- Page [Demo — ajouter le serveur a Le Chat (Mistral)](./mistral) — meme exercice avec Mistral Le Chat.
+- Page [Démo — ajouter le serveur à Le Chat (Mistral)](./mistral) — même exercice avec Mistral Le Chat.
 - Page [Connecter un client IA](../clients-mcp) — configurations pour les autres plateformes (Claude, Codex, Gemini…).
-- Page [Outils MCP](../outils/) — detail des 4 outils exposes par le serveur.
-- Page [Jeton API Georisques v2](../api-georisques-v2) — pour beneficier des endpoints v2 (donnees plus riches, quotas par utilisateur).
+- Page [Outils MCP](../outils/) — détail des 4 outils exposés par le serveur.
+- Page [Jeton API Georisques v2](../api-georisques-v2) — pour bénéficier des endpoints v2 (données plus riches, quotas par utilisateur).
