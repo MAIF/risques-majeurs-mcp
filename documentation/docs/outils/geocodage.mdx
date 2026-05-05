@@ -1,19 +1,19 @@
 ---
 sidebar_position: 2
-title: Geocodage
-description: Outil de geocodage d'adresses en France via l'API IGN
+title: Géocodage
+description: Outil de géocodage d'adresses en France via l'API IGN
 ---
 
-# Geocodage
+# Géocodage
 
-L'outil `geocodage` transforme une adresse textuelle en coordonnees GPS (longitude, latitude) et en code INSEE de la commune. Il utilise l'[API de geocodage de la Geoplateforme IGN](https://data.geopf.fr/).
+L'outil `geocodage` transforme une adresse textuelle en coordonnées GPS (longitude, latitude) et en code INSEE de la commune. Il utilise l'[API de geocodage de la Geoplateforme IGN](https://data.geopf.fr/).
 
-## Parametres d'entree
+## Parametres d'entrée
 
 | Parametre | Type | Obligatoire | Description |
 |---|---|---|---|
-| `adresse` | `string` | Oui | L'adresse a geocoder (ex: "20 avenue de Segur, Paris") |
-| `limite` | `number` | Non | Nombre maximum de resultats (1 a 50, defaut: 5) |
+| `adresse` | `string` | Oui | L’adresse à géocoder (ex: "20 avenue de Ségur, Paris") |
+| `limite` | `number` | Non | Nombre maximum de resultats (1 à 50, défaut: 5) |
 
 ## Exemple d'appel
 
@@ -24,7 +24,7 @@ L'outil `geocodage` transforme une adresse textuelle en coordonnees GPS (longitu
 }
 ```
 
-## Schema de sortie
+## Schéma de sortie
 
 Chaque resultat contient :
 
@@ -33,14 +33,14 @@ Chaque resultat contient :
 | `libelle` | `string` | Libelle complet de l'adresse |
 | `score` | `number` | Score de pertinence (0 a 1) |
 | `type` | `string` | Type de resultat (`housenumber`, `street`, `locality`, `municipality`) |
-| `coordonnees.longitude` | `number` | Longitude (EPSG:4326 / WGS 84) |
-| `coordonnees.latitude` | `number` | Latitude (EPSG:4326 / WGS 84) |
+| `coordonnées.longitude` | `number` | Longitude (EPSG:4326 / WGS 84) |
+| `coordonnées.latitude` | `number` | Latitude (EPSG:4326 / WGS 84) |
 | `codeInsee` | `string` | Code INSEE de la commune |
 | `commune` | `string` | Nom de la commune |
 | `codePostal` | `string` | Code postal |
-| `contexte` | `string` | Contexte complementaire |
+| `contexte` | `string` | Contexte complémentaire |
 
-## Exemple de reponse
+## Exemple de réponse
 
 ```json
 {
@@ -49,7 +49,7 @@ Chaque resultat contient :
       "libelle": "20 Avenue de Segur 75007 Paris",
       "score": 0.96,
       "type": "housenumber",
-      "coordonnees": {
+      "coordonnées": {
         "longitude": 2.3089,
         "latitude": 48.8534
       },
@@ -62,7 +62,7 @@ Chaque resultat contient :
 }
 ```
 
-## API utilisee
+## API utilisée
 
 - **Endpoint** : `https://data.geopf.fr/geocodage/search`
 - **Documentation** : [Geoplateforme IGN — Geocodage](https://data.geopf.fr/)
