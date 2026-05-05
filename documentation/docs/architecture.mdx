@@ -8,17 +8,22 @@ description: Architecture technique du serveur Risques Majeurs MCP
 
 ## Vue d'ensemble
 
+Le serveur supporte **deux transports MCP** au choix : **stdio** (le client lance le serveur comme sous-processus) et **Streamable HTTP** (le serveur écoute sur un port). Les deux modes partagent exactement le même `McpServer` et les mêmes outils — seule la couche transport change.
+
 ```mermaid
 flowchart TB
     subgraph Clients
         CD[Claude Desktop]
         CC[Claude Code]
+        CG[ChatGPT / Le Chat]
         AC[Autre client MCP]
     end
 
     subgraph "Risques Majeurs MCP"
+        IDX[index.ts]
+        STDIO[StdioServerTransport]
         EX[Express HTTP]
-        TR[Streamable HTTP Transport]
+        TR[StreamableHTTPServerTransport]
         SRV[McpServer]
         T1[geocodage]
         T2[liste_risques]
@@ -28,14 +33,21 @@ flowchart TB
     end
 
     subgraph "APIs externes"
-        IGN[Geoplateforme IGN]
-        GR[Georisques API]
-        WMS[Georisques WMS]
+        IGN[Géoplateforme IGN]
+        GR[Géorisques API]
+        WMS[Géorisques WMS]
         CARTO[CARTO tiles]
     end
 
-    CD & CC & AC -->|HTTP POST /mcp| EX
-    EX --> TR --> SRV
+    CD -->|stdin/stdout| IDX
+    CC -->|stdin/stdout ou HTTP| IDX
+    CG -->|HTTP POST /mcp| EX
+    AC -->|stdin/stdout ou HTTP| IDX
+    EX --> TR
+    IDX -->|--stdio| STDIO
+    IDX -->|défaut| EX
+    STDIO --> SRV
+    TR --> SRV
     SRV --> T1 & T2 & T3 & T4
     SRV --> RES
     T1 -->|geocodage| IGN
@@ -67,15 +79,36 @@ risques-majeurs-mcp/
 └── mise.toml               # Taches mise
 ```
 
-## Transport MCP
+## Transports MCP
 
-Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requête HTTP créé une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un choix delibere : tous les outils exposés sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un etat entre les requêtes.
+`server/index.ts` détecte le flag CLI `--stdio` (ou la variable `MCP_TRANSPORT=stdio`) au démarrage et choisit le transport en conséquence. Les deux modes partagent le même `McpServer`, créé par `createServer()` dans `server/server.ts`.
+
+```mermaid
+flowchart LR
+    START([node dist/index.js]) --> CHECK{--stdio<br/>ou MCP_TRANSPORT=stdio ?}
+    CHECK -->|oui| RUNSTDIO[runStdio]
+    CHECK -->|non| RUNHTTP[runHttp]
+    RUNSTDIO --> SCRV1[createServer]
+    RUNSTDIO --> ST[StdioServerTransport]
+    SCRV1 --> CONN1[server.connect transport]
+    ST --> CONN1
+    RUNHTTP --> EXPRESS[Express + CORS + rate-limit]
+    EXPRESS --> LOOP[Pour chaque POST /mcp:]
+    LOOP --> SCRV2[createServer]
+    LOOP --> HT[StreamableHTTPServerTransport]
+    SCRV2 --> CONN2[server.connect transport]
+    HT --> CONN2
+```
+
+### Mode Streamable HTTP (par défaut)
+
+Le serveur écoute sur `http://localhost:3000/mcp`. Chaque requête HTTP crée une nouvelle instance du `McpServer` et du transport, sans gestion de sessions. C'est un choix délibéré : tous les outils exposés sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un état entre les requêtes.
 
 ```mermaid
 sequenceDiagram
     participant C as Client MCP
     participant E as Express
-    participant T as Transport
+    participant T as StreamableHTTPServerTransport
     participant S as McpServer
 
     C->>E: POST /mcp (JSON-RPC)
@@ -83,9 +116,52 @@ sequenceDiagram
     E->>T: new StreamableHTTPServerTransport()
     S->>T: server.connect(transport)
     T->>T: handleRequest(req, res, body)
-    T-->>C: Réponse JSON-RPC
-    Note over T,S: Fermeture à la fin de la requête
+    T-->>C: Réponse JSON-RPC (event-stream)
+    Note over T,S: Instance fermée à la fin de la requête
+    C->>E: POST /mcp (autre requête)
+    Note right of E: Nouvelle instance créée à chaque requête
 ```
+
+Avantages : multi-clients, hot-reload en dev, exposition possible via tunnel HTTPS (ngrok, cloudflared) pour ChatGPT / Le Chat.
+
+### Mode stdio
+
+Le client MCP lance le serveur comme sous-processus et communique via stdin (requêtes) / stdout (réponses). Une seule instance du `McpServer` vit pour toute la durée du processus.
+
+```mermaid
+sequenceDiagram
+    participant C as Client MCP (Claude Desktop, Codex…)
+    participant P as Processus node
+    participant T as StdioServerTransport
+    participant S as McpServer
+
+    C->>P: spawn(node dist/index.js --stdio)
+    P->>S: createServer()
+    P->>T: new StdioServerTransport()
+    S->>T: server.connect(transport)
+    Note over T: stdout réservé au protocole<br/>console.log redirigé vers stderr
+    C->>T: JSON-RPC (stdin)
+    T->>S: tool call
+    S-->>T: result
+    T-->>C: JSON-RPC (stdout)
+    Note over C,T: Instance unique pour toute la session
+    C->>P: SIGTERM / fin de session
+    P->>T: transport.close()
+    P->>S: server.close()
+```
+
+Avantages : pas de port à ouvrir, démarrage simple via `npx github:MAIF/risques-majeurs-mcp --stdio`, isolation par client.
+
+### Comparatif
+
+| Aspect | Streamable HTTP | stdio |
+|---|---|---|
+| Lancement | `npm start` (ou équivalent) | Le client lance le processus |
+| Communication | HTTP POST sur `/mcp` | stdin / stdout |
+| Cycle de vie | Nouvelle instance par requête | Instance unique par processus |
+| Multi-clients | Oui (un seul serveur partagé) | Non (un processus par client) |
+| Logs | `console.log` → stdout | Redirigé vers stderr (stdout = protocole) |
+| Cas d'usage | Dev (hot-reload), tunnel public, multi-utilisateurs | Claude Desktop, Codex CLI, install via `npx` |
 
 ## Build
 
