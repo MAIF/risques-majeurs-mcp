@@ -6,18 +6,18 @@ import CodeBlock from '@theme/CodeBlock';
 const features = [
   {
     icon: '🌍',
-    title: 'Geocodage intelligent',
-    description: 'Transformez n\'importe quelle adresse en France en coordonnees GPS et code INSEE via l\'API IGN Geoplateforme.',
+    title: 'Géocodage intelligent',
+    description: 'Transformez n\'importe quelle adresse en France en coordonnées GPS et code INSEE via l\'API IGN Géoplateforme.',
   },
   {
     icon: '⚠️',
     title: '7 risques majeurs',
-    description: 'Argiles, inondations, mouvements de terrain, cavites, installations nucleaires, ICPE Seveso et catastrophes naturelles.',
+    description: 'Argiles, inondations, mouvements de terrain, cavités, installations nucléaires, ICPE Seveso et catastrophes naturelles.',
   },
   {
     icon: '🗺️',
     title: 'Carte interactive',
-    description: 'Visualisez l\'exposition aux risques sur une carte MapLibre avec couches WMS, legendes et controles interactifs.',
+    description: 'Visualisez l\'exposition aux risques sur une carte MapLibre avec couches WMS, légendes et contrôles interactifs.',
   },
   {
     icon: '🔌',
@@ -30,19 +30,19 @@ const features = [
     description: (
       <>
         S'appuie sur les API publiques de{' '}
-        <Link href="https://www.georisques.gouv.fr/">Georisques</Link>,{' '}
+        <Link href="https://www.georisques.gouv.fr/">Géorisques</Link>,{' '}
         de la{' '}
-        <Link href="https://data.geopf.fr/">Geoplateforme IGN</Link>{' '}
+        <Link href="https://data.geopf.fr/">Géoplateforme IGN</Link>{' '}
         et des fonds de carte{' '}
         <Link href="https://carto.com/">CARTO</Link>.
-        Donnees ouvertes, transparentes et a jour.
+        Données ouvertes, transparentes et à jour.
       </>
     ),
   },
   {
     icon: '🚀',
-    title: 'Pret a l\'emploi',
-    description: 'Aucune installation locale requise via `npx`. Modes stdio et Streamable HTTP supportes pour s\'adapter a tous les clients MCP.',
+    title: 'Prêt à l\'emploi',
+    description: 'Aucune installation locale requise via `npx`. Modes stdio et Streamable HTTP supportés pour s\'adapter à tous les clients MCP.',
   },
 ];
 
@@ -50,8 +50,8 @@ const risks = [
   { icon: '🏜️', label: 'Retrait-gonflement des argiles' },
   { icon: '🌊', label: 'Inondations' },
   { icon: '⛰️', label: 'Mouvements de terrain' },
-  { icon: '🕳️', label: 'Cavites souterraines' },
-  { icon: '☢️', label: 'Installations nucleaires' },
+  { icon: '🕳️', label: 'Cavités souterraines' },
+  { icon: '☢️', label: 'Installations nucléaires' },
   { icon: '🏭', label: 'Installations Seveso (ICPE)' },
   { icon: '🌪️', label: 'Catastrophes naturelles' },
 ];
@@ -66,10 +66,10 @@ function HeroBanner() {
         <p>{siteConfig.tagline}</p>
         <div className="hero-buttons">
           <Link className="button button--primary button--lg" to="/docs/demarrage-rapide">
-            Demarrage rapide
+            Démarrage rapide
           </Link>
           <Link className="button button--secondary button--lg" to="/docs/introduction">
-            Decouvrir le projet
+            Découvrir le projet
           </Link>
         </div>
       </div>
@@ -129,9 +129,9 @@ function QuickStartSection() {
   return (
     <section className="quickstart-section">
       <div className="container">
-        <h2>Pret en quelques secondes</h2>
+        <h2>Prêt en quelques secondes</h2>
         <p style={{ textAlign: 'center', marginBottom: '1rem', fontWeight: 500 }}>
-          Pas d'installation, pas de build manuel. Copiez ce snippet dans la configuration MCP de votre client (Claude Desktop, Codex CLI, Gemini CLI…) — npx clone le depot, build le serveur et le lance en stdio :
+          Pas d'installation, pas de build manuel. Copiez ce snippet dans la configuration MCP de votre client (Claude Desktop, Codex CLI, Gemini CLI…) — npx clone le dépôt, build le serveur et le lance en stdio :
         </p>
         <CodeBlock language="json">{configExample}</CodeBlock>
         <br />
@@ -143,7 +143,7 @@ function QuickStartSection() {
         </CodeBlock>
         <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <Link className="button button--primary" to="/docs/demarrage-rapide">
-            Voir le demarrage rapide complet →
+            Voir le démarrage rapide complet →
           </Link>
         </p>
       </div>
@@ -158,12 +158,12 @@ function OSSSection() {
         <h2>Un projet OSS by MAIF</h2>
         <p>
           Risques Majeurs MCP fait partie de <strong>OSS by MAIF</strong>, le chapter open source de la MAIF.
-          La MAIF s'engage a partager ses outils et ses innovations avec la communaute,
-          en misant sur la transparence, la collaboration et l'interet general.
+          La MAIF s'engage à partager ses outils et ses innovations avec la communauté,
+          en misant sur la transparence, la collaboration et l'intérêt général.
         </p>
         <div className="hero-buttons">
           <Link className="button button--primary button--lg" href="https://maif.github.io/">
-            Decouvrir OSS by MAIF
+            Découvrir OSS by MAIF
           </Link>
           <Link className="button button--outline button--primary button--lg" href="https://github.com/MAIF/risques-majeurs-mcp">
             Voir sur GitHub
