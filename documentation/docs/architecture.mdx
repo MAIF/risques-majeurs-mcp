@@ -49,16 +49,16 @@ flowchart TB
 ```
 risques-majeurs-mcp/
 ├── server/                 # Code serveur (TypeScript, compile par tsc)
-│   ├── index.ts            # Point d'entree Express + transport MCP
-│   ├── server.ts           # Definition du serveur MCP et des outils
-│   ├── risques.ts          # Definition des 7 risques (fetch, schema, texte, couches)
+│   ├── index.ts            # Point d'entrée Express + transport MCP
+│   ├── server.ts           # Définition du serveur MCP et des outils
+│   ├── risques.ts          # Définition des 7 risques (fetch, schéma, texte, couches)
 │   └── utils.ts            # Helpers (appels API, sources WMS, icones SVG)
 ├── client/                 # Application carte (TypeScript, bundle par Vite)
 │   ├── mcp-app.html        # Page HTML
 │   ├── mcp-app.ts          # App MCP (MapLibre GL)
 │   ├── mcp-app.css         # Styles
-│   └── controls.ts         # Controles MapLibre (couches, legendes, plein ecran)
-├── dist/                   # Build de production (genere)
+│   └── controls.ts         # Controles MapLibre (couches, légendes, plein ecran)
+├── dist/                   # Build de production (génère)
 ├── documentation/          # Documentation Docusaurus
 ├── package.json
 ├── tsconfig.json           # Config TypeScript client
@@ -69,7 +69,7 @@ risques-majeurs-mcp/
 
 ## Transport MCP
 
-Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requete HTTP cree une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un choix delibere : tous les outils exposes sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un etat entre les requetes.
+Le serveur utilise le transport **Streamable HTTP** du SDK MCP. Chaque requête HTTP créé une nouvelle instance du serveur MCP et du transport, sans gestion de sessions. C'est un choix delibere : tous les outils exposés sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un etat entre les requêtes.
 
 ```mermaid
 sequenceDiagram
@@ -83,8 +83,8 @@ sequenceDiagram
     E->>T: new StreamableHTTPServerTransport()
     S->>T: server.connect(transport)
     T->>T: handleRequest(req, res, body)
-    T-->>C: Reponse JSON-RPC
-    Note over T,S: Fermeture a la fin de la requete
+    T-->>C: Réponse JSON-RPC
+    Note over T,S: Fermeture à la fin de la requête
 ```
 
 ## Build
@@ -96,7 +96,7 @@ Le build se fait en deux etapes :
 
 Le fichier HTML unique est ensuite servi comme ressource MCP par le serveur, ce qui permet au client MCP d'afficher la carte directement.
 
-## Definition d'un risque
+## Définition d'un risque
 
 Chaque risque dans `server/risques.ts` est un objet avec la structure suivante :
 
@@ -105,14 +105,14 @@ Chaque risque dans `server/risques.ts` est un objet avec la structure suivante :
   code: string;            // Identifiant unique
   libelle: string;         // Nom affiche
   fetch(lon, lat);         // Appel API Georisques (aiguillage vers l'endpoint v1 ou v2 selon la configuration du jeton d'authentification)
-  outputSchema: ZodSchema; // Schema de sortie (Zod)
+  outputSchema: ZodSchema; // Schéma de sortie (Zod)
   text(exposition);        // Rendu texte
-  layers: [{               // Couches carte (peut etre vide)
+  layers: [{               // Couches carte (peut être vide)
     id: string;
     nom: string;
     source(exposition);    // Source MapLibre (raster WMS ou GeoJSON)
-    layer: object | object[];   // Config de la couche MapLibre (tableau accepte pour appliquer differents styles)
-    legend(exposition);    // Element DOM de legende
+    layer: object | object[];   // Config de la couche MapLibre (tableau accepte pour appliquer différents styles)
+    legend(exposition);    // Element DOM de légende
   }]
 }
 ```
