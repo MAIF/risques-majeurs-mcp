@@ -6,9 +6,9 @@ description: Comment contribuer au projet Risques Majeurs MCP
 
 # Contribuer
 
-Merci de votre interet pour Risques Majeurs MCP ! Toute contribution est la bienvenue.
+Merci de votre intérêt pour Risques Majeurs MCP ! Toute contribution est la bienvenue.
 
-## Prerequis
+## Prérequis
 
 - [Node.js](https://nodejs.org/) >= 24 (ou [mise](https://mise.jdx.dev/))
 - [Git](https://git-scm.com/)
@@ -16,14 +16,14 @@ Merci de votre interet pour Risques Majeurs MCP ! Toute contribution est la bien
 ## Mise en place
 
 ```bash
-# Cloner le depot
+# Cloner le dépôt
 git clone https://github.com/MAIF/risques-majeurs-mcp.git
 cd risques-majeurs-mcp
 
-# Installer les dependances
+# Installer les dépendances
 npm install
 
-# Lancer en mode developpement
+# Lancer en mode développement
 npm run start-dev
 ```
 
@@ -49,9 +49,9 @@ mise run test
 
 | Tache | Description |
 |---|---|
-| `mise run install` | Installer les dependances |
+| `mise run install` | Installer les dépendances |
 | `mise run build` | Build serveur + client |
-| `mise run dev` | Lancer en mode developpement |
+| `mise run dev` | Lancer en mode développement |
 | `mise run test` | Lancer les tests |
 | `mise run start` | Lancer en mode production |
 | `mise run docs:dev` | Lancer la documentation en mode dev |
@@ -60,27 +60,27 @@ mise run test
 
 ## Ajouter un nouveau risque
 
-Pour ajouter un nouveau risque, ajoutez une entree dans le tableau `RISQUES` du fichier `server/risques.ts`. Chaque risque doit definir :
+Pour ajouter un nouveau risque, ajoutez une entrée dans le tableau `RISQUES` du fichier `server/risques.ts`. Chaque risque doit définir :
 
 ```typescript
 {
   code: 'mon_risque',                    // Identifiant unique
   libelle: 'Mon risque',                 // Nom affiche
   fetch: async (longitude, latitude) => {
-    // Appel a l'API Georisques (aiguillage vers l'endpoint v1 ou v2 selon la configuration du jeton d'authentification)
-    // Retourne les donnees brutes
+    // Appel à l'API Georisques (aiguillage vers l'endpoint v1 ou v2 selon la configuration du jeton d'authentification)
+    // Retourne les données brutes
   },
-  outputSchema: z.object({...}),         // Schema Zod
+  outputSchema: z.object({...}),         // Schéma Zod
   text: (exposition) => {
-    // Retourne un resume texte
+    // Retourne un résumé texte
   },
   layers: [                              // Couches carte (ou [] si pas de carte)
     {
       id: 'mon_risque',
       nom: 'Mon risque',
       source: (exposition) => ({...}),   // Source MapLibre
-      layer: {...},                      // Config couche MapLibre (tableau accepte pour appliquer differents styles)
-      legend: (exposition) => {...},     // Element DOM de legende
+      layer: {...},                      // Config couche MapLibre (tableau accepte pour appliquer différents styles)
+      legend: (exposition) => {...},     // Element DOM de légende
     }
   ]
 }
@@ -90,14 +90,14 @@ Les outils `exposition_risques` et `carte_exposition_risques` prendront automati
 
 ## Soumettre une contribution
 
-1. Forkez le depot
-2. Creez une branche depuis `main`
+1. Forkez le dépôt
+2. Créez une branche depuis `main`
 3. Faites vos modifications
 4. Verifiez que le build passe : `npm run build`
 5. Verifiez que les tests passent : `npm test`
 6. Ouvrez une Pull Request en utilisant le [template PR](https://github.com/MAIF/risques-majeurs-mcp/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
 
-## Signaler un bug ou proposer une idee
+## Signaler un bug ou proposer une idée
 
 Ouvrez une [issue sur GitHub](https://github.com/MAIF/risques-majeurs-mcp/issues) en utilisant le template fourni.
 
