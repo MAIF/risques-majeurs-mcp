@@ -1,25 +1,25 @@
 ---
 sidebar_position: 5
 title: Les risques couverts
-description: Detail des 7 risques majeurs evalues par le serveur
+description: Détail des 7 risques majeurs évalués par le serveur
 ---
 
 # Les risques couverts
 
-Le serveur evalue **7 risques majeurs** en s'appuyant sur les API publiques de [Georisques](https://www.georisques.gouv.fr/).
+Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/).
 
 ## Retrait-gonflement des argiles
 
 - **Code** : `argiles`
 - **API v1** : `/api/v1/rga`
 - **API v2** : `/api/v2/rga`
-- **Evaluation** : ponctuelle (pas de rayon)
+- **Évaluation** : ponctuelle (pas de rayon)
 
-Evalue le niveau d'exposition au phenomene de retrait-gonflement des sols argileux, qui peut provoquer des fissures sur les batiments. Le score va de 0 (non expose) a 3 (exposition forte).
+Évalue le niveau d'exposition au phénomène de retrait-gonflement des sols argileux, qui peut provoquer des fissures sur les bâtiments. Le score va de 0 (non exposé) à 3 (exposition forte).
 
 | Score | Niveau |
 |---|---|
-| 0 | Non expose |
+| 0 | Non exposé |
 | 1 | Exposition faible |
 | 2 | Exposition moyenne |
 | 3 | Exposition forte |
@@ -31,16 +31,16 @@ Evalue le niveau d'exposition au phenomene de retrait-gonflement des sols argile
 - **API v2** : `/api/v2/mvt`
 - **Rayon** : 5 km
 
-Recense les mouvements de terrain (glissements, eboulements, coulees, effondrements, erosion des berges) dans un rayon de 5 km. Chaque mouvement est decrit par son type, son lieu et sa date.
+Recense les mouvements de terrain (glissements, éboulements, coulées, effondrements, érosion des berges) dans un rayon de 5 km. Chaque mouvement est décrit par son type, son lieu et sa date.
 
-## Cavites souterraines
+## Cavités souterraines
 
 - **Code** : `cavites`
 - **API v1** : `/api/v1/cavites`
 - **API v2** : `/api/v2/cavites`
 - **Rayon** : 5 km
 
-Recense les cavites souterraines (caves, carrieres, cavites naturelles, galeries, ouvrages civils et militaires, puits, souterrains) dans un rayon de 5 km.
+Recense les cavités souterraines (caves, carrières, cavités naturelles, galeries, ouvrages civils et militaires, puits, souterrains) dans un rayon de 5 km.
 
 ## Inondations
 
@@ -49,14 +49,14 @@ Recense les cavites souterraines (caves, carrieres, cavites naturelles, galeries
 - **API v2** : `/api/v2/gaspar/tri`, `/api/v2/gaspar/azi`, `/api/v2/gaspar/papi`, `/api/v2/gaspar/pprn`
 - **Rayon** : 5 km
 
-Le risque inondation agrege 4 sources de donnees complementaires :
+Le risque inondation agrège 4 sources de données complémentaires :
 
 | Source | Description |
 |---|---|
-| **TRI** | Territoires a Risques importants d'Inondation |
+| **TRI** | Territoires à Risques importants d'Inondation |
 | **AZI** | Atlas de Zones Inondables |
-| **PAPI** | Programmes d'Actions de Prevention des Inondations |
-| **PPRN** | Plans de Prevention des Risques Naturels (filtre sur le risque inondation) |
+| **PAPI** | Programmes d'Actions de Prévention des Inondations |
+| **PPRN** | Plans de Prévention des Risques Naturels (filtre sur le risque inondation) |
 
 ## Catastrophes naturelles (CatNat)
 
@@ -64,25 +64,25 @@ Le risque inondation agrege 4 sources de donnees complementaires :
 - **API** : `/api/v1/gaspar/catnat`
 - **Rayon** : 5 km
 
-Liste les arretes de catastrophes naturelles dans un rayon de 5 km, tries par date decroissante. Chaque evenement indique le type de catastrophe, la commune concernee et la date.
+Liste les arrêtés de catastrophes naturelles dans un rayon de 5 km, triés par date décroissante. Chaque événement indique le type de catastrophe, la commune concernée et la date.
 
 :::note
 Ce risque n'a pas de couche cartographique. Il n'est disponible que via l'outil `exposition_risques`.
 :::
 
-## Installations classees Seveso (ICPE)
+## Installations classées Seveso (ICPE)
 
 - **Code** : `icpe`
 - **API v1** : `/api/v1/installations_classees`
 - **API v2** : `/api/v2/installations_classees`
 - **Rayon** : 5 km
 
-Recense les installations classees pour la protection de l'environnement (ICPE) ayant le statut Seveso (seuil haut ou seuil bas) dans un rayon de 5 km. Les installations non Seveso sont filtrees.
+Recense les installations classées pour la protection de l'environnement (ICPE) ayant le statut Seveso (seuil haut ou seuil bas) dans un rayon de 5 km. Les installations non Seveso sont filtrées.
 
-## Installations nucleaires
+## Installations nucléaires
 
 - **Code** : `installations_nucleaires`
 - **API v1** : `/api/v1/installations_nucleaires`
 - **API v2** : `/api/v2/installations_nucleaires`
 
-Recense les installations nucleaires (centrales, centres de recherche, etc.) a proximite des coordonnees indiquees. Le rayon de recherche est defini par l'API Georisques.
+Recense les installations nucléaires (centrales, centres de recherche, etc.) à proximité des coordonnées indiquées. Le rayon de recherche est défini par l'API Géorisques.
