@@ -42,7 +42,7 @@ const features = [
   {
     icon: '🚀',
     title: 'Pret a l\'emploi',
-    description: 'Installation en une commande. Serveur HTTP Streamable MCP, sans configuration complexe.',
+    description: 'Aucune installation locale requise via `npx`. Modes stdio et Streamable HTTP supportes pour s\'adapter a tous les clients MCP.',
   },
 ];
 
@@ -120,7 +120,8 @@ function QuickStartSection() {
   const configExample = `{
   "mcpServers": {
     "risques-majeurs": {
-      "url": "http://localhost:3000/mcp"
+      "command": "npx",
+      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }`;
@@ -129,14 +130,22 @@ function QuickStartSection() {
     <section className="quickstart-section">
       <div className="container">
         <h2>Pret en quelques secondes</h2>
-        <CodeBlock language="bash">
-          {`npm install risques-majeurs-mcp\nnpx risques-majeurs-mcp`}
-        </CodeBlock>
-        <br />
         <p style={{ textAlign: 'center', marginBottom: '1rem', fontWeight: 500 }}>
-          Puis ajoutez le serveur dans la configuration de votre client MCP :
+          Pas d'installation, pas de build manuel. Copiez ce snippet dans la configuration MCP de votre client (Claude Desktop, Codex CLI, Gemini CLI…) — npx clone le depot, build le serveur et le lance en stdio :
         </p>
         <CodeBlock language="json">{configExample}</CodeBlock>
+        <br />
+        <p style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          Avec <strong>Claude Code</strong>, une seule commande suffit :
+        </p>
+        <CodeBlock language="bash">
+          {`claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio`}
+        </CodeBlock>
+        <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link className="button button--primary" to="/docs/demarrage-rapide">
+            Voir le demarrage rapide complet →
+          </Link>
+        </p>
       </div>
     </section>
   );
