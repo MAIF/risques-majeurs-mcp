@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Vue d'ensemble
-description: Les 4 outils MCP exposes par le serveur
+description: Les 4 outils MCP exposés par le serveur
 ---
 
 # Les outils MCP
@@ -18,25 +18,25 @@ flowchart LR
     S -->|carte| APP[Carte MapLibre]
 ```
 
-| Outil | Description | Entree | Sortie |
+| Outil | Description | Entrée | Sortie |
 |---|---|---|---|
-| [**geocodage**](./geocodage) | Geocoder une adresse | Adresse textuelle | Coordonnees GPS, code INSEE |
+| [**geocodage**](./geocodage) | Géocoder une adresse | Adresse textuelle | Coordonnees GPS, code INSEE |
 | **liste_risques** | Lister les risques disponibles | — | Liste des risques avec disponibilite |
-| [**exposition_risques**](./exposition-risques) | Evaluer l'exposition aux risques | Longitude, latitude | Texte descriptif par risque |
-| [**carte_exposition_risques**](./carte-exposition-risques) | Carte interactive des risques | Longitude, latitude | Donnees structurees + carte |
+| [**exposition_risques**](./exposition-risques) | Évaluer l'exposition aux risques | Longitude, latitude | Texte descriptif par risque |
+| [**carte_exposition_risques**](./carte-exposition-risques) | Carte interactive des risques | Longitude, latitude | Données structurées + carte |
 
 ## Chaine d'appels typique
 
-En general, un agent IA enchaine les appels dans cet ordre :
+En general, un agent IA enchaîne les appels dans cet ordre :
 
-1. **`geocodage`** — L'utilisateur fournit une adresse, l'agent la geocode pour obtenir les coordonnees
-2. **`exposition_risques`** ou **`carte_exposition_risques`** — L'agent evalue les risques aux coordonnees obtenues
+1. **`geocodage`** — L'utilisateur fournit une adresse, l'agent la géocode pour obtenir les coordonnées
+2. **`exposition_risques`** ou **`carte_exposition_risques`** — L'agent évalué les risques aux coordonnées obtenues
 
-L'outil `liste_risques` permet a l'agent de savoir quels risques sont disponibles avant d'appeler les outils d'exposition.
+L'outil `liste_risques` permet à l'agent de savoir quels risques sont disponibles avant d'appeler les outils d'exposition.
 
 ## Filtrage des risques
 
-Les outils `exposition_risques` et `carte_exposition_risques` acceptent un parametre optionnel `risques` qui permet de filtrer les risques a evaluer. Par defaut, tous les risques disponibles sont evalues.
+Les outils `exposition_risques` et `carte_exposition_risques` acceptent un parametre optionnel `risques` qui permet de filtrer les risques a évaluer. Par défaut, tous les risques disponibles sont évalués.
 
 ```json
 {
