@@ -58,4 +58,4 @@ run = "npm run start-stdio"
 
 [tasks."mcp:inspect"]
 description = "Launch the MCP inspector against the local MCP server"
-run = "npx @modelcontextprotocol/inspector"
+run = "npx @modelcontextprotocol/inspector  streamable-http http://localhost:3000/mcp"
