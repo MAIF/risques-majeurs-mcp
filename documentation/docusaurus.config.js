@@ -11,8 +11,7 @@ const config = {
   },
 
   url: 'https://maif.github.io',
-  /** baseUrl: '/risques-majeurs-mcp/', TODO: change it when opensourced **/
-  baseUrl: '/',
+  baseUrl: '/risques-majeurs-mcp/',
 
   organizationName: 'MAIF',
   projectName: 'risques-majeurs-mcp',
