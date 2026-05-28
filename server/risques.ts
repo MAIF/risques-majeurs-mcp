@@ -389,9 +389,16 @@ export const RISQUES = [
         const dataTri: any = await callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] });
         const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
         const dataPapi: any = await callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] });
-        const dataPpr: any = await callGeorisqueAPI('api/v1/ppr', params, { data: [] });
-        const filteredPpr = dataPpr.data
-          .filter((p: any) => p.risque.code_risque === '11'); // Inondation
+        // PPR a migré de api/v1/ppr (supprimé) vers api/v1/gaspar/pprn,
+        // qui ne supporte que longitude/latitude/rayon + codesAlea (et non latlon).
+        const pprParams = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: '5000',
+          page_size: '1000',
+          codesAlea: 'INOND'
+        });
+        const dataPpr: any = await callGeorisqueAPI('api/v1/gaspar/pprn', pprParams, { totalElements: 0, content: [] });
         return {
           tri: {
             total: dataTri.data.length,
@@ -430,13 +437,13 @@ export const RISQUES = [
             })
           },
           ppr: {
-            total: filteredPpr.length,
-            plans: filteredPpr.map((p: any) => {
+            total: dataPpr.totalElements,
+            plans: dataPpr.content.map((p: any) => {
               return {
-                libelle: p.nom_ppr,
-                risque: p.risque.libelle_risque,
-                commune: p.libelle_commune,
-                date: p.date_approbation && format(parse(p.date_approbation, 'DD/MM/YYYY'), 'YYYY-MM-DD')
+                libelle: p.libPpr,
+                risque: 'Inondation',
+                commune: '',
+                date: p.dateModification && format(parse(p.dateModification, 'DD/MM/YYYY'), 'YYYY-MM-DD')
               }
             })
           }
