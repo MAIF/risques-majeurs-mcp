@@ -11,9 +11,9 @@ Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de 
 ## Retrait-gonflement des argiles
 
 - **Code** : `argiles`
-- **API v1** : `/api/v1/rga`
-- **API v2** : `/api/v2/rga`
-- **Évaluation** : ponctuelle (pas de rayon)
+- **API v1** : `/api/v1/rga`, `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/rga`, `/api/v2/gaspar/pprn`
+- **Évaluation** : ponctuelle (pas de rayon) + PPR de la commune (v1) ou dans un rayon de 5 km (v2)
 
 Évalue le niveau d'exposition au phénomène de retrait-gonflement des sols argileux, qui peut provoquer des fissures sur les bâtiments. Le score va de 0 (non exposé) à 3 (exposition forte).
 
@@ -24,14 +24,18 @@ Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de 
 | 2 | Exposition moyenne |
 | 3 | Exposition forte |
 
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-RGA` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+
 ## Mouvements de terrain
 
 - **Code** : `mouvement_terrain`
-- **API v1** : `/api/v1/mvt`
-- **API v2** : `/api/v2/mvt`
+- **API v1** : `/api/v1/mvt`, `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/mvt`, `/api/v2/gaspar/pprn`
 - **Rayon** : 5 km
 
 Recense les mouvements de terrain (glissements, éboulements, coulées, effondrements, érosion des berges) dans un rayon de 5 km. Chaque mouvement est décrit par son type, son lieu et sa date.
+
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-Mvt` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
 
 ## Cavités souterraines
 
@@ -56,10 +60,10 @@ Le risque inondation agrège 4 sources de données complémentaires :
 | **TRI** | Territoires à Risques importants d'Inondation |
 | **AZI** | Atlas de Zones Inondables |
 | **PAPI** | Programmes d'Actions de Prévention des Inondations |
-| **PPRN** | Plans de Prévention des Risques Naturels (filtre sur le risque inondation) |
+| **PPRN** | Plans de Prévention des Risques Naturels (filtre sur `modeleProcedure` `PPRN-I` ou `PPRN-Multi`) |
 
 :::note
-En v1, l'endpoint `/api/v1/gaspar/pprn` ne prend pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé.
+En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
 :::
 
 Sur la carte, la couche **PPR Inondation** affiche les périmètres des servitudes d'utilité publique inondation (couche WMS `SUP_INOND`), issues des PPR inondation approuvés. L'ancienne couche de zonage réglementaire `PPRN_INOND` a été retirée du service WMS de Géorisques.
@@ -80,11 +84,13 @@ Ce risque n'a pas de couche cartographique. Il n'est disponible que via l'outil 
 ## Installations classées Seveso (ICPE)
 
 - **Code** : `icpe`
-- **API v1** : `/api/v1/installations_classees`
-- **API v2** : `/api/v2/installations_classees`
+- **API v1** : `/api/v1/installations_classees`, `/api/v1/gaspar/pprt`
+- **API v2** : `/api/v2/installations_classees`, `/api/v2/gaspar/pprt`
 - **Rayon** : 5 km
 
 Recense les installations classées pour la protection de l'environnement (ICPE) ayant le statut Seveso (seuil haut ou seuil bas) dans un rayon de 5 km. Les installations non Seveso sont filtrées.
+
+Inclut également les Plans de Prévention des Risques Technologiques (PPRT), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
 
 ## Installations nucléaires
 

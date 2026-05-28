@@ -162,7 +162,7 @@ describe('tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
-    expect(result.structuredContent.exposition.risques.argiles).toEqual({ libelle: 'Exposition moyenne', score: 2 });
+    expect(result.structuredContent.exposition.risques.argiles).toMatchObject({ libelle: 'Exposition moyenne', score: 2 });
     expect(result.structuredContent.exposition.risques.cavites).toBeUndefined();
     expect(result.structuredContent.erreurs).toEqual([
       { code: 'cavites', message: "Erreur lors de l'appel à l'API Géorisques 'api/v1/cavites' : fetch failed" },

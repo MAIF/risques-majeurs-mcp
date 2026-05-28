@@ -52,12 +52,116 @@ const procedureV1 = (p: any, libelle: string, date: unknown) => {
   };
 };
 
-// Ne conserve que les PPRN qui concernent l'inondation
-// (PPRN-I, et PPRN-Multi qui peut inclure l'aléa Inondation parmi d'autres).
-const pprInondation = (data: any) => {
-  return (data.content ?? []).filter((p: any) =>
-    p.modeleProcedure === 'PPRN-I' || p.modeleProcedure === 'PPRN-Multi'
-  );
+// Helper partagé : récupère les Plans de Prévention des Risques pertinents
+// autour d'un point, en filtrant côté serveur sur `modeleProcedure` (le paramètre
+// `codesAlea` n'est pas honoré par les endpoints v1, et garde une sémantique
+// stricte en v2 — défense en profondeur).
+// En v1, `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : la recherche
+// porte sur la commune du point. En v2, elle porte sur un rayon de 5 km.
+type Ppr = {
+  total: number;
+  perimetre: 'commune' | 'rayon';
+  plans: Array<{ libelle: string; risque: string; commune: string; date: string | null }>;
+};
+
+const fetchPpr = async (
+  longitude: number,
+  latitude: number,
+  endpointSuffix: string,
+  modelesProcedure: string[],
+  libelleRisque: string,
+  codeAlea?: string
+): Promise<Ppr> => {
+  const token = process.env.API_V2_TOKEN;
+  const empty = { totalElements: 0, content: [] };
+  let data: any;
+  let perimetre: Ppr['perimetre'];
+  if (token) {
+    const params = new URLSearchParams({
+      longitude: `${longitude}`,
+      latitude: `${latitude}`,
+      rayon: RAYON,
+      pageSize: '1000',
+    });
+    if (codeAlea) params.append('codesAlea', codeAlea);
+    data = await callGeorisqueAPI(`api/v2/${endpointSuffix}`, params, empty, token);
+    perimetre = 'rayon';
+  } else {
+    const params = new URLSearchParams({
+      longitude: `${longitude}`,
+      latitude: `${latitude}`,
+      page_size: '1000',
+    });
+    data = await callGeorisqueAPI(`api/v1/${endpointSuffix}`, params, empty);
+    perimetre = 'commune';
+  }
+  const plans = (data.content ?? []).filter((p: any) => modelesProcedure.includes(p.modeleProcedure));
+  return {
+    total: plans.length,
+    perimetre,
+    plans: plans.map((p: any) => ({
+      libelle: str(p.libPpr),
+      risque: libelleRisque,
+      commune: '',
+      date: toIsoDate(p.dateModification)
+    }))
+  };
+};
+
+// Schéma Zod réutilisable pour le bloc `ppr` exposé par certains risques.
+const pprSchema = (description: string) => z
+  .object({
+    total: z
+      .number()
+      .gte(0)
+      .describe("Nombre de plans de prévention"),
+    perimetre: z
+      .enum(['commune', 'rayon'])
+      .optional()
+      .describe("Périmètre de recherche : commune de l'adresse (API v1) ou rayon de 5 km (API v2)"),
+    plans: z
+      .array(
+        z
+          .object({
+            libelle: z
+              .string()
+              .describe("Libellé du plan de prévention"),
+            risque: z
+              .string()
+              .describe("Risque"),
+            commune: z
+              .string()
+              .optional()
+              .describe("Nom de la commune concernée"),
+            date: z
+              .iso.date()
+              .nullable()
+              .optional()
+              .describe("Date de mise à jour")
+          })
+      )
+      .describe("Liste des plans de prévention à proximité")
+  })
+  .optional()
+  .describe(description);
+
+// Fragment de texte commun pour décrire le bloc `ppr` dans la sortie texte d'un risque.
+const pprText = (libelleSection: string, ppr: Ppr | undefined): string => {
+  if (!ppr) {
+    return '';
+  }
+  const perimetre = ppr.perimetre === 'commune'
+    ? "sur la commune de l'adresse indiquée"
+    : "dans un rayon de 5 kilomètres autour de l'adresse indiquée";
+  let result = `\n\n${ppr.total} ${libelleSection} recensés ${perimetre}.`;
+  if (ppr.total > 0) {
+    result += ' Voici la liste des plans de prévention :' + bullets(ppr.plans
+      .map(p => {
+        const date = toFrenchDate(p.date);
+        return `${p.libelle}${p.commune ? ' sur la commune de ' + p.commune : ''}${date ? ' (mis à jour le ' + date + ')' : ''}`;
+      }));
+  }
+  return result;
 };
 
 // Normalise le statut Seveso : l'API renvoie un libellé ('Seveso seuil haut')
@@ -100,20 +204,28 @@ export const RISQUES = [
           longitude: `${longitude}`,
           latitude: `${latitude}`,
         });
-        const data: any = await callGeorisqueAPI('api/v2/rga', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v2/rga', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'RGA'),
+        ]);
         const rga = data.content?.[0];
         return {
           libelle: str(rga?.exposition) || 'Non exposé',
-          score: parseInt(rga?.codeExposition, 10) || 0
+          score: parseInt(rga?.codeExposition, 10) || 0,
+          ppr
         };
       } else {
         const params = new URLSearchParams({
           latlon: `${longitude},${latitude}`,
         });
-        const data: any = await callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" });
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" }),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'RGA'),
+        ]);
         return {
           libelle: str(data.exposition) || 'Non exposé',
-          score: parseInt(data.codeExposition, 10) || 0
+          score: parseInt(data.codeExposition, 10) || 0,
+          ppr
         };
       }
     },
@@ -126,12 +238,15 @@ export const RISQUES = [
               .number()
               .gte(0)
               .lte(3)
-              .describe("Valeur du niveau d'exposition")
+              .describe("Valeur du niveau d'exposition"),
+            ppr: pprSchema("Plans de Prévention des Risques Naturels (PPRN) liés au retrait-gonflement des argiles")
           })
           .optional()
           .describe("Exposition au risque de retrait-gonflement des argiles"),
     text: (exposition: any) => {
-      return `Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : ${exposition.libelle} (score de ${exposition.score} sur 3)`;
+      let result = `Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : ${exposition.libelle} (score de ${exposition.score} sur 3)`;
+      result += pprText("plans de prévention des risques de retrait-gonflement des argiles", exposition.ppr);
+      return result;
     },
     layers: [
       {
@@ -165,7 +280,10 @@ export const RISQUES = [
           rayon: RAYON,
           pageSize: '1000',
         });
-        const data: any = await callGeorisqueAPI('api/v2/mvt', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v2/mvt', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', 'MVT'),
+        ]);
         const mouvements = data.content ?? [];
         return {
           total: mouvements.length,
@@ -178,7 +296,8 @@ export const RISQUES = [
               longitude: m.longitude,
               latitude: m.latitude
             }
-          })
+          }),
+          ppr
         };
       } else {
         const params = new URLSearchParams({
@@ -186,7 +305,10 @@ export const RISQUES = [
           rayon: RAYON,
           page_size: '1000'
         });
-        const data: any = await callGeorisqueAPI('api/v1/mvt', params, { data: [] });
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v1/mvt', params, { data: [] }),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', 'MVT'),
+        ]);
         const mouvements = data.data ?? [];
         return {
           total: mouvements.length,
@@ -199,7 +321,8 @@ export const RISQUES = [
               longitude: m.longitude,
               latitude: m.latitude
             }
-          })
+          }),
+          ppr
         };
       }
     },
@@ -237,7 +360,8 @@ export const RISQUES = [
                       .describe("Latitude"),
                   })
               )
-              .describe("Liste des mouvements de terrain à proximité")
+              .describe("Liste des mouvements de terrain à proximité"),
+            ppr: pprSchema("Plans de Prévention des Risques Naturels (PPRN) liés aux mouvements de terrain")
           })
           .optional()
           .describe("Exposition au risque mouvements de terrain"),
@@ -250,6 +374,7 @@ export const RISQUES = [
             return `${m.type || 'Mouvement de terrain'}${m.lieu ? ' au lieu ' + m.lieu : ''}${m.commentaire ? ' (' + m.commentaire + ')' : ''}${date ? ' le ' + date : ''}`;
           }));
       }
+      result += pprText("plans de prévention des risques de mouvement de terrain", exposition.ppr);
       return result;
     },
     layers: [
@@ -397,17 +522,13 @@ export const RISQUES = [
           rayon: RAYON,
           pageSize: '1000',
         });
-        const pprParams = new URLSearchParams(params);
-        pprParams.append('codesAlea', 'INOND');
         const empty = { totalElements: 0, content: [] };
-        const [dataTri, dataAzi, dataPapi, dataPpr]: any[] = await Promise.all([
+        const [dataTri, dataAzi, dataPapi, ppr]: [any, any, any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v2/gaspar/tri', params, empty, token),
           callGeorisqueAPI('api/v2/gaspar/azi', params, empty, token),
           callGeorisqueAPI('api/v2/gaspar/papi', params, empty, token),
-          callGeorisqueAPI('api/v2/gaspar/pprn', pprParams, empty, token),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', 'INOND'),
         ]);
-        // Filtre côté serveur par sécurité, en plus du filtre `codesAlea`.
-        const ppr = pprInondation(dataPpr);
         return {
           tri: {
             total: (dataTri.content ?? []).length,
@@ -421,18 +542,7 @@ export const RISQUES = [
             total: (dataPapi.content ?? []).length,
             programmes: (dataPapi.content ?? []).map(procedureV2)
           },
-          ppr: {
-            total: ppr.length,
-            perimetre: 'rayon' as const,
-            plans: ppr.map((p: any) => {
-              return {
-                libelle: str(p.libPpr),
-                risque: 'Inondation',
-                commune: '',
-                date: toIsoDate(p.dateModification)
-              }
-            })
-          }
+          ppr
         };
       } else {
         const params = new URLSearchParams({
@@ -440,23 +550,12 @@ export const RISQUES = [
           rayon: RAYON,
           page_size: '1000'
         });
-        // PPR a migré de api/v1/ppr (supprimé) vers api/v1/gaspar/pprn, qui ne
-        // supporte que longitude/latitude (et non latlon), sans rayon : la recherche
-        // porte sur la commune du point. Le paramètre `codesAlea` n'est pas honoré
-        // par cet endpoint v1, le filtre par aléa Inondation se fait donc côté
-        // serveur sur `modeleProcedure`.
-        const pprParams = new URLSearchParams({
-          longitude: `${longitude}`,
-          latitude: `${latitude}`,
-          page_size: '1000'
-        });
-        const [dataTri, dataAzi, dataPapi, dataPpr]: any[] = await Promise.all([
+        const [dataTri, dataAzi, dataPapi, ppr]: [any, any, any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] }),
           callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] }),
           callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] }),
-          callGeorisqueAPI('api/v1/gaspar/pprn', pprParams, { totalElements: 0, content: [] }),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', 'INOND'),
         ]);
-        const ppr = pprInondation(dataPpr);
         return {
           tri: {
             total: (dataTri.data ?? []).length,
@@ -470,18 +569,7 @@ export const RISQUES = [
             total: (dataPapi.data ?? []).length,
             programmes: (dataPapi.data ?? []).map((p: any) => procedureV1(p, p.libelle_papi, p.date_labellisation))
           },
-          ppr: {
-            total: ppr.length,
-            perimetre: 'commune' as const,
-            plans: ppr.map((p: any) => {
-              return {
-                libelle: str(p.libPpr),
-                risque: 'Inondation',
-                commune: '',
-                date: toIsoDate(p.dateModification)
-              }
-            })
-          }
+          ppr
         };
       }
     },
@@ -595,41 +683,7 @@ export const RISQUES = [
               })
               .optional()
               .describe("Programmes d'Actions de Prévention des Inondations (PAPI)"),
-            ppr: z
-              .object({
-                total: z
-                  .number()
-                  .gte(0)
-                  .describe("Nombre de plans de prévention"),
-                perimetre: z
-                  .enum(['commune', 'rayon'])
-                  .optional()
-                  .describe("Périmètre de recherche : commune de l'adresse (API v1) ou rayon de 5 km (API v2)"),
-                plans: z
-                  .array(
-                    z
-                      .object({
-                        libelle: z
-                          .string()
-                          .describe("Libellé du plans de prévention"),
-                        risque: z
-                          .string()
-                          .describe("Risque"),
-                        commune: z
-                          .string()
-                          .optional()
-                          .describe("Nom de la commune concernée"),
-                        date: z
-                          .iso.date()
-                          .nullable()
-                          .optional()
-                          .describe("Date d'approbation")
-                      })
-                  )
-                  .describe("Liste des plans de prévention à proximité")
-              })
-              .optional()
-              .describe("Plans de Prévention des Risques Naturels (PPRN)")
+            ppr: pprSchema("Plans de Prévention des Risques Naturels (PPRN) liés à l'inondation")
           })
           .optional()
           .describe("Exposition au risque inondation"),
@@ -651,17 +705,7 @@ export const RISQUES = [
         result += ' Voici la liste des programmes et des risques concernés :' + bullets(exposition.papi.programmes
           .map((p: any) => `${p.libelle}${risques(p.risques)}${commune(p.commune)}`));
       }
-      const perimetre = exposition.ppr.perimetre === 'commune'
-        ? "sur la commune de l'adresse indiquée"
-        : "dans un rayon de 5 kilomètres autour de l'adresse indiquée";
-      result += `\n\n${exposition.ppr.total} plans de prévention des inondations recensés ${perimetre}.`;
-      if (exposition.ppr.total > 0) {
-        result += ' Voici la liste des plans de prévention :' + bullets(exposition.ppr.plans
-          .map((p: any) => {
-            const date = toFrenchDate(p.date);
-            return `${p.libelle}${commune(p.commune)}${date ? ' (mis à jour le ' + date + ')' : ''}`;
-          }));
-      }
+      result += pprText("plans de prévention des inondations", exposition.ppr);
       return result;
     },
     layers: [
@@ -810,11 +854,15 @@ export const RISQUES = [
           rayon: RAYON,
           pageSize: '1000',
         });
-        const data: any = await callGeorisqueAPI('api/v2/installations_classees', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v2/installations_classees', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
+          fetchPpr(longitude, latitude, 'gaspar/pprt', ['PPRT'], 'Technologique'),
+        ]);
         const installations = installationsSeveso(data.content ?? []);
         return {
           total: installations.length,
-          installations
+          installations,
+          ppr
         };
       } else {
         const params = new URLSearchParams({
@@ -822,11 +870,15 @@ export const RISQUES = [
           rayon: RAYON,
           page_size: '1000'
         });
-        const data: any = await callGeorisqueAPI('api/v1/installations_classees', params, { data: [] });
+        const [data, ppr]: [any, Ppr] = await Promise.all([
+          callGeorisqueAPI('api/v1/installations_classees', params, { data: [] }),
+          fetchPpr(longitude, latitude, 'gaspar/pprt', ['PPRT'], 'Technologique'),
+        ]);
         const installations = installationsSeveso(data.data ?? []);
         return {
           total: installations.length,
-          installations
+          installations,
+          ppr
         };
       }
     },
@@ -854,7 +906,8 @@ export const RISQUES = [
                       .describe("Latitude"),
                   })
               )
-              .describe("Liste des installation classées Seveso à proximité")
+              .describe("Liste des installation classées Seveso à proximité"),
+            ppr: pprSchema("Plans de Prévention des Risques Technologiques (PPRT)")
           })
           .optional()
           .describe("Exposition au risque installations classées Seveso"),
@@ -864,6 +917,7 @@ export const RISQUES = [
         result += ' Voici la liste des installations :' + bullets(exposition.installations
           .map((i: any) => `${i.raisonSociale || 'Installation sans raison sociale'} (${i.seveso.replaceAll('_', ' ')})`));
       }
+      result += pprText("plans de prévention des risques technologiques", exposition.ppr);
       return result;
     },
     layers: [
