@@ -29,9 +29,9 @@ export class LayersControl implements IControl {
     _map: Map;
     _container: HTMLElement;
     _ctrls: any;
-    _inputs: any;
+    _inputs: HTMLInputElement[];
+    _groupName: string;
   constructor(ctrls: any) {
-    // This div will hold all the checkboxes and their labels
     this._container = document.createElement("div");
     this._container.classList.add(
       "maplibregl-ctrl",
@@ -40,28 +40,29 @@ export class LayersControl implements IControl {
     );
     this._ctrls = ctrls;
     this._inputs = [];
-    // Create the checkboxes and add them to the container
+    this._groupName = `layers-control-${Math.random().toString(36).slice(2)}`;
     for (const key of Object.keys(this._ctrls)) {
-      let labeled_checkbox = this._createLabeledCheckbox(key);
-      this._container.appendChild(labeled_checkbox);
+      let labeled_radio = this._createLabeledRadio(key);
+      this._container.appendChild(labeled_radio);
     }
   }
 
-  // Creates one checkbox and its label
-  _createLabeledCheckbox(key: string) {
+  _createLabeledRadio(key: string) {
     let label = document.createElement("label");
     label.classList.add("layer-control");
     let text = document.createTextNode(key);
     let input = document.createElement("input");
     this._inputs.push(input);
-    input.type = "checkbox";
+    input.type = "radio";
+    input.name = this._groupName;
     input.id = key;
-    // When changed, toggle all the layers associated with the checkbox via
-    // `this._ctrls`.
     input.addEventListener("change", () => {
-      let visibility = input.checked ? "visible" : "none";
-      for (const layer of this._ctrls[input.id]) {
-        this._map.setLayoutProperty(layer, "visibility", visibility);
+      if (!input.checked) return;
+      for (const other of this._inputs) {
+        let visibility = other === input ? "visible" : "none";
+        for (const layer of this._ctrls[other.id]) {
+          this._map.setLayoutProperty(layer, "visibility", visibility);
+        }
       }
     });
     label.appendChild(input);
@@ -71,18 +72,15 @@ export class LayersControl implements IControl {
 
   onAdd(map: Map) {
     this._map = map;
-    // For every checkbox, find out if all its associated layers are visible.
-    // Check the box if so.
-    for (const input of this._inputs) {
-      let layers = this._ctrls[input.id];
-      let is_visible = true;
-      for (const layername of layers) {
-        is_visible =
-          is_visible &&
-          this._map.getLayoutProperty(layername, "visibility") !== "none";
+    // Only the first layer is visible by default; hide every other layer.
+    this._inputs.forEach((input, idx) => {
+      const selected = idx === 0;
+      input.checked = selected;
+      const visibility = selected ? "visible" : "none";
+      for (const layername of this._ctrls[input.id]) {
+        this._map.setLayoutProperty(layername, "visibility", visibility);
       }
-      input.checked = is_visible;
-    }
+    });
     return this._container;
   }
 
