@@ -35,7 +35,7 @@ La v2 accepte des criteres géographiques et thématiques bien plus puissants qu
 - **Parcelles cadastrales**
 - **Codes INSEE**, **département**, **région**
 
-Côté serveur MCP, cela se traduit par exemple par l'endpoint dédié `/api/v2/gaspar/pprn?codesAlea=INOND` (filtrage natif sur le risque inondation), la ou la v1 oblige à appeler l'endpoint générique `/api/v1/ppr` puis filtrer côté serveur sur `code_risque === '11'`.
+Côté serveur MCP, cela se traduit par exemple par l'endpoint dédié `/api/v2/gaspar/pprn?codesAlea=INOND` (filtrage natif sur le risque inondation), là où la v1, sur `/api/v1/gaspar/pprn`, n'honore pas le paramètre `codesAlea` et oblige à filtrer côté serveur sur `modeleProcedure` (`PPRN-I` et `PPRN-Multi`).
 
 ### Format de réponse normalisé
 
@@ -56,7 +56,7 @@ L'authentification permet à Géorisques d'attribuer des **quotas par utilisateu
 | Pagination | Variable selon l'endpoint | `totalElements` + `content[]` partout |
 | Filtres | Lat/lon + rayon principalement | Lat/lon, rayon, WKT, parcelles, codes INSEE, département, région, thématique |
 | Format des dates | `DD/MM/YYYY` | ISO 8601 |
-| Endpoint PPRN inondation | `/api/v1/ppr` + filtre côté client | `/api/v2/gaspar/pprn?codesAlea=INOND` |
+| Endpoint PPRN inondation | `/api/v1/gaspar/pprn` + filtre côté client sur `modeleProcedure` | `/api/v2/gaspar/pprn?codesAlea=INOND` |
 | Quotas | Partages, anonymes | Par utilisateur authentifié |
 
 ## Obtenir un jeton

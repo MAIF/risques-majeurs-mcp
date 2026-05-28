@@ -331,6 +331,11 @@ export const RISQUES = [
         const dataPapi: any = await callGeorisqueAPI('api/v2/gaspar/papi', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
         params.append('codesAlea', 'INOND');
         const dataPpr: any = await callGeorisqueAPI('api/v2/gaspar/pprn', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        // Filtre client par sécurité : on ne garde que les PPRN qui concernent l'inondation
+        // (PPRN-I, et PPRN-Multi qui peut inclure l'aléa Inondation parmi d'autres).
+        const filteredPpr: any[] = dataPpr.content.filter((p: any) =>
+          p.modeleProcedure === 'PPRN-I' || p.modeleProcedure === 'PPRN-Multi'
+        );
         return {
           tri: {
             total: dataTri.totalElements,
@@ -369,8 +374,8 @@ export const RISQUES = [
             })
           },
           ppr: {
-            total: dataPpr.totalElements,
-            plans: dataPpr.content.map((p: any) => {
+            total: filteredPpr.length,
+            plans: filteredPpr.map((p: any) => {
               return {
                 libelle: p.libPpr,
                 risque: 'Inondation',
@@ -390,15 +395,19 @@ export const RISQUES = [
         const dataAzi: any = await callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] });
         const dataPapi: any = await callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] });
         // PPR a migré de api/v1/ppr (supprimé) vers api/v1/gaspar/pprn,
-        // qui ne supporte que longitude/latitude/rayon + codesAlea (et non latlon).
+        // qui ne supporte que longitude/latitude/rayon (et non latlon).
+        // Le paramètre `codesAlea` n'est pas honoré par cet endpoint v1, le filtre
+        // par aléa Inondation se fait donc côté client sur `modeleProcedure`.
         const pprParams = new URLSearchParams({
           longitude: `${longitude}`,
           latitude: `${latitude}`,
           rayon: '5000',
-          page_size: '1000',
-          codesAlea: 'INOND'
+          page_size: '1000'
         });
         const dataPpr: any = await callGeorisqueAPI('api/v1/gaspar/pprn', pprParams, { totalElements: 0, content: [] });
+        const filteredPpr: any[] = dataPpr.content.filter((p: any) =>
+          p.modeleProcedure === 'PPRN-I' || p.modeleProcedure === 'PPRN-Multi'
+        );
         return {
           tri: {
             total: dataTri.data.length,
@@ -437,8 +446,8 @@ export const RISQUES = [
             })
           },
           ppr: {
-            total: dataPpr.totalElements,
-            plans: dataPpr.content.map((p: any) => {
+            total: filteredPpr.length,
+            plans: filteredPpr.map((p: any) => {
               return {
                 libelle: p.libPpr,
                 risque: 'Inondation',
