@@ -28,13 +28,18 @@ Le serveur expose 4 outils MCP :
 | `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` | `/api/v2/gaspar/catnat` |
 | `icpe` | Installations classées Seveso (ICPE, + PPRT) | `/api/v1/installations_classees`, `gaspar/pprt` | `/api/v2/installations_classees`, `gaspar/pprt` |
 | `installations_nucleaires` | Installations nucléaires | `/api/v1/installations_nucleaires` | `/api/v2/installations_nucleaires` |
+| `seisme` | Séisme (zonage sismique + PPRN) | `/api/v1/zonage_sismique`, `gaspar/pprn` | `/api/v2/zonage_sismique`, `gaspar/pprn` |
+| `feux_foret` | Feux de forêt (PPRN) | `/api/v1/gaspar/pprn` | `/api/v2/gaspar/pprn` |
+| `littoral` | Risques littoraux : submersion marine, recul du trait de côte (PPRN) | `/api/v1/gaspar/pprn` | `/api/v2/gaspar/pprn` |
+| `avalanche` | Avalanches (PPRN) | `/api/v1/gaspar/pprn` | `/api/v2/gaspar/pprn` |
+| `risques_miniers` | Risques miniers (PPRM) | `/api/v1/gaspar/pprm` | `/api/v2/gaspar/pprm` |
 
 Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKEN` est configurée (jeton d'authentification Géorisques, gratuit). Sinon, les endpoints v1 publics sont utilisés.
 
 > [!WARNING]
 > Depuis fin 2026, la spécification OpenAPI de Géorisques documente une réponse `410 Gone` pour les endpoints v1 (hors PPR) : leur retrait est annoncé, sans date à ce jour. Configurer un jeton v2 est recommandé. Si un risque ne peut pas être évalué, les outils renvoient les autres risques et signalent l'erreur au lieu d'échouer entièrement.
 
-Les risques `argiles`, `mouvement_terrain`, `inondations` et `icpe` incluent les plans de prévention associés (PPRN ou PPRT). En v1, les endpoints `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : seuls les plans dont le périmètre contient l'adresse sont renvoyés (rayon de 5 km en v2).
+Les risques `argiles`, `mouvement_terrain`, `inondations`, `icpe`, `seisme`, `feux_foret`, `littoral`, `avalanche` et `risques_miniers` incluent les plans de prévention associés (PPRN, PPRT ou PPRM). En v1, les endpoints `gaspar/pprn`, `gaspar/pprt` et `gaspar/pprm` ne prennent pas de rayon : seuls les plans dont le périmètre contient l'adresse sont renvoyés (rayon de 5 km en v2). Les plans multirisques (`PPRN-Multi`) ne sont retenus que pour les aléas qu'ils couvrent réellement.
 
 ### Carte interactive
 

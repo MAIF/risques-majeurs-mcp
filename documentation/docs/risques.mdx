@@ -1,12 +1,12 @@
 ---
 sidebar_position: 5
 title: Les risques couverts
-description: Détail des 7 risques majeurs évalués par le serveur
+description: Détail des 12 risques majeurs évalués par le serveur
 ---
 
 # Les risques couverts
 
-Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/).
+Le serveur évalue **12 risques majeurs** en s'appuyant sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/).
 
 ## Retrait-gonflement des argiles
 
@@ -101,3 +101,60 @@ Inclut également les Plans de Prévention des Risques Technologiques (PPRT), ap
 - **API v2** : `/api/v2/installations_nucleaires`
 
 Recense les installations nucléaires (centrales, centres de recherche, etc.) à proximité des coordonnées indiquées. Le rayon de recherche est défini par l'API Géorisques.
+
+## Séisme
+
+- **Code** : `seisme`
+- **API v1** : `/api/v1/zonage_sismique`, `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/zonage_sismique`, `/api/v2/gaspar/pprn` (`codesAlea=SEISM`)
+- **Couche carte** : zonage sismique (WMS `risq_zonage_sismique`)
+
+Indique la **zone de sismicité réglementaire** de la commune de l'adresse, de 1 (très faible) à 5 (forte), et les Plans de Prévention des Risques sismiques (`PPRN-S`, ou `PPRN-Multi` couvrant l'aléa séisme, code GASPAR `13`).
+
+| Zone | Sismicité |
+|---|---|
+| 1 | Très faible |
+| 2 | Faible |
+| 3 | Modérée |
+| 4 | Moyenne |
+| 5 | Forte |
+
+## Feux de forêt
+
+- **Code** : `feux_foret`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=FEUFORET`)
+- **Couche carte** : périmètres des servitudes feu de forêt (WMS `SUP_FEU`)
+
+Recense les Plans de Prévention des Risques d'incendie de forêt (`PPRN-IF`, ou `PPRN-Multi` couvrant l'aléa feu de forêt, code GASPAR `16`).
+
+## Risques littoraux
+
+- **Code** : `littoral`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=SUBMAR` et `RTC`)
+- **Couche carte** : communes concernées par un PPR submersion marine approuvé (WMS `PPRN_COMMUNE_SUBMAR_APPROUV`)
+
+Recense les Plans de Prévention des Risques littoraux (`PPRN-L`, ou `PPRN-Multi` couvrant la submersion marine, l'avancée dunaire ou le recul du trait de côte, codes GASPAR `117`, `125` et `126`).
+
+## Avalanches
+
+- **Code** : `avalanche`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=AVAL`)
+- **Couche carte** : périmètres des servitudes avalanche (WMS `SUP_AVALANCHE`)
+
+Recense les Plans de Prévention des Risques d'avalanche (`PPRN-Av`, ou `PPRN-Multi` couvrant l'aléa avalanche, code GASPAR `14`).
+
+## Risques miniers
+
+- **Code** : `risques_miniers`
+- **API v1** : `/api/v1/gaspar/pprm`
+- **API v2** : `/api/v2/gaspar/pprm`
+- **Couche carte** : périmètres des servitudes risques miniers (WMS `SUP_MINIER`)
+
+Recense les Plans de Prévention des Risques Miniers (`PPRM`).
+
+:::note
+Comme pour les autres blocs `ppr`, ces plans sont ceux applicables à l'adresse en v1 (périmètre contenant le point) et ceux situés dans un rayon de 5 km en v2. Les plans sont peu nombreux à l'échelle nationale (environ 235 PPRN-IF, 127 PPRN-L, 69 PPRM, 12 PPRN-S et 8 PPRN-Av) : la plupart des adresses n'en ont aucun.
+:::
