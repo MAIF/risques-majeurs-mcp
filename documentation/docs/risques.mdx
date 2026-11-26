@@ -64,6 +64,8 @@ Le risque inondation agrège 4 sources de données complémentaires :
 
 :::note
 En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
+
+L'endpoint v1 n'honorant pas le filtre `codesAlea`, les plans multirisques (`PPRN-Multi`) sont vérifiés un par un via leur détail (`/api/v1/gaspar/pprn/{idGaspar}`) : un PPRN-Multi n'est retenu que s'il couvre réellement l'aléa du risque (code GASPAR `11` pour l'inondation, sous-aléas `121` à `126` pour les mouvements de terrain, `127` « tassements différentiels » pour le retrait-gonflement des argiles). En v2, ce filtrage est assuré par Géorisques via `codesAlea` (`INOND`, `MVT`, `SEC`).
 :::
 
 Sur la carte, la couche **PPR Inondation** affiche les périmètres des servitudes d'utilité publique inondation (couche WMS `SUP_INOND`), issues des PPR inondation approuvés. L'ancienne couche de zonage réglementaire `PPRN_INOND` a été retirée du service WMS de Géorisques.

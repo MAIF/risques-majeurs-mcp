@@ -64,14 +64,72 @@ type Ppr = {
   plans: Array<{ libelle: string; risque: string; commune: string; date: string | null }>;
 };
 
+// Aléa ciblé par un bloc PPR :
+// - `codeV2` : valeur du paramètre `codesAlea` de l'API v2 (filtrage côté Géorisques) ;
+// - `couvert` : prédicat sur les codes GASPAR (aléas et sous-aléas) couverts par un PPR,
+//   utilisé en v1 pour ne garder que les PPRN-Multi qui concernent réellement l'aléa.
+type Alea = { codeV2: string; couvert: (codes: Set<string>) => boolean };
+
+const SOUS_ALEAS_MOUVEMENT_TERRAIN = ['121', '122', '123', '124', '125', '126'];
+
+const ALEAS = {
+  // 11 : Inondation (sous-aléas 112 à 117)
+  inondation: { codeV2: 'INOND', couvert: codes => codes.has('11') },
+  // 12 : Mouvement de terrain (sous-aléas 121 à 126, hors 127 traité par `argiles`)
+  mouvementTerrain: {
+    codeV2: 'MVT',
+    couvert: codes => SOUS_ALEAS_MOUVEMENT_TERRAIN.some(c => codes.has(c))
+      || (codes.has('12') && ![...codes].some(c => /^12\d$/.test(c)))
+  },
+  // 127 : Tassements différentiels (retrait-gonflement des argiles)
+  argiles: { codeV2: 'SEC', couvert: codes => codes.has('127') },
+} satisfies Record<string, Alea>;
+
+// Codes GASPAR des aléas et sous-aléas couverts par un PPR, d'après son détail v1
+// (`/api/v1/gaspar/pprn/{idGaspar}`).
+const codesAleasPpr = (detail: any): Set<string> => {
+  const codes = new Set<string>();
+  for (const commune of detail?.communes ?? []) {
+    for (const alea of commune.aleas ?? []) {
+      if (alea.codeGaspar) codes.add(String(alea.codeGaspar));
+      for (const sousAlea of alea.sousAlea ?? []) {
+        if (sousAlea.codeGaspar) codes.add(String(sousAlea.codeGaspar));
+      }
+    }
+  }
+  return codes;
+};
+
+// En v1, `codesAlea` n'étant pas honoré, un PPRN-Multi peut ne pas concerner l'aléa
+// ciblé (ex. un PPR inondation + mouvement de terrain pour le risque argiles). On
+// consulte son détail pour vérifier les aléas couverts. Sans information exploitable
+// (détail indisponible ou sans aléa), le plan est conservé.
+const filtrerMultiV1 = async (endpointSuffix: string, plans: any[], alea: Alea | undefined) => {
+  if (!alea) {
+    return plans;
+  }
+  const keep = await Promise.all(plans.map(async (p: any) => {
+    if (p.modeleProcedure !== 'PPRN-Multi' || !p.idGaspar) {
+      return true;
+    }
+    try {
+      const detail = await callGeorisqueAPI(`api/v1/${endpointSuffix}/${encodeURIComponent(p.idGaspar)}`, new URLSearchParams(), {});
+      const codes = codesAleasPpr(detail);
+      return codes.size === 0 || alea.couvert(codes);
+    } catch {
+      return true;
+    }
+  }));
+  return plans.filter((_p, idx) => keep[idx]);
+};
+
 const fetchPpr = async (
   longitude: number,
   latitude: number,
   endpointSuffix: string,
   modelesProcedure: string[],
   libelleRisque: string,
-  // Code d'aléa v2 (`codesAlea`) : MVT, INOND, SEC (retrait-gonflement des argiles)…
-  codeAlea?: string
+  alea?: Alea
 ): Promise<Ppr> => {
   const token = process.env.API_V2_TOKEN;
   const empty = { totalElements: 0, content: [] };
@@ -84,7 +142,7 @@ const fetchPpr = async (
       rayon: RAYON,
       pageSize: '1000',
     });
-    if (codeAlea) params.append('codesAlea', codeAlea);
+    if (alea) params.append('codesAlea', alea.codeV2);
     data = await callGeorisqueAPI(`api/v2/${endpointSuffix}`, params, empty, token);
     perimetre = 'rayon';
   } else {
@@ -96,7 +154,10 @@ const fetchPpr = async (
     data = await callGeorisqueAPI(`api/v1/${endpointSuffix}`, params, empty);
     perimetre = 'commune';
   }
-  const plans = (data.content ?? []).filter((p: any) => modelesProcedure.includes(p.modeleProcedure));
+  let plans = (data.content ?? []).filter((p: any) => modelesProcedure.includes(p.modeleProcedure));
+  if (!token) {
+    plans = await filtrerMultiV1(endpointSuffix, plans, alea);
+  }
   return {
     total: plans.length,
     perimetre,
@@ -207,7 +268,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v2/rga', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'SEC'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', ALEAS.argiles),
         ]);
         const rga = data.content?.[0];
         return {
@@ -221,7 +282,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" }),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'SEC'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', ALEAS.argiles),
         ]);
         return {
           libelle: str(data.exposition) || 'Non exposé',
@@ -283,7 +344,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v2/mvt', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', 'MVT'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', ALEAS.mouvementTerrain),
         ]);
         const mouvements = data.content ?? [];
         return {
@@ -308,7 +369,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v1/mvt', params, { data: [] }),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', 'MVT'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-Mvt', 'PPRN-Multi'], 'Mouvement de terrain', ALEAS.mouvementTerrain),
         ]);
         const mouvements = data.data ?? [];
         return {
@@ -528,7 +589,7 @@ export const RISQUES = [
           callGeorisqueAPI('api/v2/gaspar/tri', params, empty, token),
           callGeorisqueAPI('api/v2/gaspar/azi', params, empty, token),
           callGeorisqueAPI('api/v2/gaspar/papi', params, empty, token),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', 'INOND'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', ALEAS.inondation),
         ]);
         return {
           tri: {
@@ -555,7 +616,7 @@ export const RISQUES = [
           callGeorisqueAPI('api/v1/gaspar/tri', params, { data: [] }),
           callGeorisqueAPI('api/v1/gaspar/azi', params, { data: [] }),
           callGeorisqueAPI('api/v1/gaspar/papi', params, { data: [] }),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', 'INOND'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-I', 'PPRN-Multi'], 'Inondation', ALEAS.inondation),
         ]);
         return {
           tri: {

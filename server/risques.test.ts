@@ -499,3 +499,79 @@ describe('PPR (v2)', () => {
     expect(new URL(pprtCall!).searchParams.has('codesAlea')).toBe(false);
   });
 });
+
+describe('PPRN-Multi (v1) : filtrage sur les aléas réellement couverts', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  // Liste v1 de la commune : un PPRN-Multi inondation + mouvement de terrain (cas de Tenay)
+  const liste = {
+    totalElements: 1,
+    content: [{ idGaspar: '01DDT19970011', libPpr: 'PPRi PPRmt_Tenay', modeleProcedure: 'PPRN-Multi', dateModification: '26/03/2025' }],
+  };
+  const detail = {
+    idGaspar: '01DDT19970011',
+    communes: [{
+      nom: 'TENAY',
+      codeInsee: '01416',
+      aleas: [
+        { codeGaspar: '11', libelle: 'Inondation', sousAlea: [{ codeGaspar: '112' }, { codeGaspar: '113' }] },
+        { codeGaspar: '12', libelle: 'Mouvement de terrain', sousAlea: [{ codeGaspar: '123' }, { codeGaspar: '124' }] },
+      ],
+    }],
+  };
+
+  it.each([
+    ['argiles', 0],
+    ['mouvement_terrain', 1],
+    ['inondations', 1],
+  ])("%s : %i plan(s) retenu(s)", async (code, attendu) => {
+    const fetchMock = stubGeorisques({
+      '/api/v1/gaspar/pprn': liste,
+      '/api/v1/gaspar/pprn/01DDT19970011': detail,
+    });
+    const exposition = await risque(code).fetch(5.5097, 45.9186);
+    expect(exposition.ppr.total).toBe(attendu);
+    const urls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+    expect(urls.some(u => u.includes('/api/v1/gaspar/pprn/01DDT19970011'))).toBe(true);
+  });
+
+  it('argiles : retient un PPRN-Multi couvrant les tassements différentiels (127)', async () => {
+    stubGeorisques({
+      '/api/v1/gaspar/pprn': liste,
+      '/api/v1/gaspar/pprn/01DDT19970011': {
+        communes: [{ aleas: [{ codeGaspar: '12', sousAlea: [{ codeGaspar: '127' }] }] }],
+      },
+    });
+    expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
+    expect((await risque('mouvement_terrain').fetch(5.5097, 45.9186)).ppr.total).toBe(0);
+  });
+
+  it('conserve le PPRN-Multi si son détail est indisponible', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      const path = new URL(url).pathname;
+      if (path === '/api/v1/gaspar/pprn/01DDT19970011') {
+        return Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' });
+      }
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+        json: vi.fn().mockResolvedValue(path === '/api/v1/gaspar/pprn' ? liste : { data: [] }),
+      });
+    }));
+    expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
+  });
+});
