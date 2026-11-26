@@ -70,6 +70,7 @@ const fetchPpr = async (
   endpointSuffix: string,
   modelesProcedure: string[],
   libelleRisque: string,
+  // Code d'aléa v2 (`codesAlea`) : MVT, INOND, SEC (retrait-gonflement des argiles)…
   codeAlea?: string
 ): Promise<Ppr> => {
   const token = process.env.API_V2_TOKEN;
@@ -206,7 +207,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v2/rga', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'RGA'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'SEC'),
         ]);
         const rga = data.content?.[0];
         return {
@@ -220,7 +221,7 @@ export const RISQUES = [
         });
         const [data, ppr]: [any, Ppr] = await Promise.all([
           callGeorisqueAPI('api/v1/rga', params, { exposition: 'Non exposé', codeExposition: "0" }),
-          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'RGA'),
+          fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-RGA', 'PPRN-Multi'], 'Retrait-gonflement des argiles', 'SEC'),
         ]);
         return {
           libelle: str(data.exposition) || 'Non exposé',

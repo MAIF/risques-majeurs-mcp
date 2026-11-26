@@ -458,3 +458,44 @@ describe("icpe.fetch (v1)", () => {
     expect(urls.some(u => u.includes('/api/v1/gaspar/pprn'))).toBe(false);
   });
 });
+
+describe('PPR (v2)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    process.env.API_V2_TOKEN = 'token';
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['argiles', 'SEC'],
+    ['mouvement_terrain', 'MVT'],
+    ['inondations', 'INOND'],
+  ])("%s : interroge api/v2/gaspar/pprn avec codesAlea=%s et un rayon de 5 km", async (code, codeAlea) => {
+    const fetchMock = stubGeorisques({});
+    const exposition = await risque(code).fetch(4.3601, 43.8367);
+    const pprnCall = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprn'));
+    expect(pprnCall).toBeDefined();
+    const params = new URL(pprnCall!).searchParams;
+    expect(params.get('codesAlea')).toBe(codeAlea);
+    expect(params.get('rayon')).toBe('5000');
+    expect(exposition.ppr.perimetre).toBe('rayon');
+  });
+
+  it('icpe : interroge api/v2/gaspar/pprt sans codesAlea', async () => {
+    const fetchMock = stubGeorisques({});
+    await risque('icpe').fetch(4.8589, 45.6731);
+    const pprtCall = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprt'));
+    expect(pprtCall).toBeDefined();
+    expect(new URL(pprtCall!).searchParams.has('codesAlea')).toBe(false);
+  });
+});
