@@ -13,8 +13,14 @@ L’API Géorisques expose deux générations d'endpoints :
 
 Par défaut, le serveur Risques Majeurs MCP utilise les endpoints **v1**. Si la variable d'environnement `API_V2_TOKEN` est définie, il bascule automatiquement sur les endpoints **v2** (lorsqu'ils sont disponibles pour le risque concerne).
 
+:::warning Retrait annoncé de la v1
+Depuis fin 2026, la [spécification OpenAPI de Géorisques](https://www.georisques.gouv.fr/doc-api) documente une réponse `410 Gone` pour tous les endpoints v1, à l'exception des plans de prévention (`gaspar/pprn`, `pprm`, `pprt`). Aucune date de retrait n'est annoncée et les endpoints v1 répondent encore, mais configurer un jeton v2 est désormais recommandé.
+
+Si un endpoint v1 venait à être retiré, les outils du serveur continuent de fonctionner pour les autres risques : le risque concerné est signalé comme non évalué (avec une invitation à configurer `API_V2_TOKEN`) au lieu de faire échouer tout l'appel.
+:::
+
 :::note
-Le risque `catnat` (catastrophes naturelles) n'a pas d'équivalent v2 à ce jour : l'endpoint v1 est toujours utilisé pour ce risque, même si un jeton est configuré.
+Tous les risques, y compris `catnat` (catastrophes naturelles, via `/api/v2/gaspar/catnat`), disposent désormais d'un endpoint v2.
 :::
 
 ## Pourquoi passer à la v2 ?
@@ -43,21 +49,23 @@ Côté serveur MCP, cela se traduit par exemple par l'endpoint dédié `/api/v2/
 - **Champs en camelCase** et **dates au format ISO 8601** (vs snake_case et `DD/MM/YYYY` en v1).
 - **Schémas plus réguliers**d’un endpoint à l'autre.
 
-### Quotas et tracabilite
+### Quotas et traçabilité
 
-L'authentification permet à Géorisques d'attribuer des **quotas par utilisateur** plutôt que de partager un quota global anonyme : les appels authentifiés sont plus stables et moins susceptibles d'être limites en periode de forte charge.
+L'authentification permet à Géorisques d'attribuer des **quotas par utilisateur** plutôt que de partager un quota global anonyme : les appels authentifiés sont plus stables et moins susceptibles d'être limités en période de forte charge. La spécification annonce 20 appels par seconde en v2, contre 5 en v1.
 
 ### Resume
 
 | Aspect | v1 (sans jeton) | v2 (avec jeton) |
 |---|---|---|
 | Authentification | Aucune | Jeton Bearer |
-| Maintenance | Heritee, risque de dépréciation | Active |
+| Maintenance | Héritée, retrait annoncé | Active |
 | Pagination | Variable selon l'endpoint | `totalElements` + `content[]` partout |
 | Filtres | Lat/lon + rayon principalement | Lat/lon, rayon, WKT, parcelles, codes INSEE, département, région, thématique |
 | Format des dates | `DD/MM/YYYY` | ISO 8601 |
-| Endpoint PPRN inondation | `/api/v1/gaspar/pprn` + filtre côté client sur `modeleProcedure` | `/api/v2/gaspar/pprn?codesAlea=INOND` |
-| Quotas | Partages, anonymes | Par utilisateur authentifié |
+| Endpoint PPRN inondation | `/api/v1/gaspar/pprn` (commune de l'adresse, sans rayon) + filtre côté serveur sur `modeleProcedure` | `/api/v2/gaspar/pprn?codesAlea=INOND` (rayon de 5 km) |
+| Catastrophes naturelles | `/api/v1/gaspar/catnat` | `/api/v2/gaspar/catnat` |
+| Quotas | Partagés, anonymes (5 appels/s) | Par utilisateur authentifié (20 appels/s) |
+| Pérennité | Retrait annoncé (`410 Gone` documenté) | Maintenue |
 
 ## Obtenir un jeton
 

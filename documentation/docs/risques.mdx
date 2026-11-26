@@ -45,7 +45,7 @@ Recense les cavités souterraines (caves, carrières, cavités naturelles, galer
 ## Inondations
 
 - **Code** : `inondations`
-- **API v1** : `/api/v1/gaspar/tri`, `/api/v1/gaspar/azi`, `/api/v1/gaspar/papi`, `/api/v1/ppr`
+- **API v1** : `/api/v1/gaspar/tri`, `/api/v1/gaspar/azi`, `/api/v1/gaspar/papi`, `/api/v1/gaspar/pprn`
 - **API v2** : `/api/v2/gaspar/tri`, `/api/v2/gaspar/azi`, `/api/v2/gaspar/papi`, `/api/v2/gaspar/pprn`
 - **Rayon** : 5 km
 
@@ -58,10 +58,17 @@ Le risque inondation agrège 4 sources de données complémentaires :
 | **PAPI** | Programmes d'Actions de Prévention des Inondations |
 | **PPRN** | Plans de Prévention des Risques Naturels (filtre sur le risque inondation) |
 
+:::note
+En v1, l'endpoint `/api/v1/gaspar/pprn` ne prend pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé.
+:::
+
+Sur la carte, la couche **PPR Inondation** affiche les périmètres des servitudes d'utilité publique inondation (couche WMS `SUP_INOND`), issues des PPR inondation approuvés. L'ancienne couche de zonage réglementaire `PPRN_INOND` a été retirée du service WMS de Géorisques.
+
 ## Catastrophes naturelles (CatNat)
 
 - **Code** : `catnat`
-- **API** : `/api/v1/gaspar/catnat`
+- **API v1** : `/api/v1/gaspar/catnat`
+- **API v2** : `/api/v2/gaspar/catnat`
 - **Rayon** : 5 km
 
 Liste les arrêtés de catastrophes naturelles dans un rayon de 5 km, triés par date décroissante. Chaque événement indique le type de catastrophe, la commune concernée et la date.

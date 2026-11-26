@@ -43,13 +43,16 @@ L'outil `exposition_risques` évalue le niveau d'exposition aux risques majeurs 
 La réponse est un **texte** concatenant les resultats de chaque risque évalué. Par exemple :
 
 ```
-Le niveau d'exposition au risque de retrait-gonflement des argiles
-a l'adresse indiquee est : Exposition moyenne (score de 2 sur 3)
+Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Exposition moyenne (score de 2 sur 3)
 
-3 zones à risque d'inondation recensées dans un rayon de 5 kilomètres
-autour de l'adresse indiquee. Voici la liste des zones et des risques
-concernes :
-  - TRI Paris exposée aux risques Debordement de cours d'eau
+5 zones à risque d'inondation recensées dans un rayon de 5 kilomètres autour de l'adresse indiquée. Voici la liste des zones et des risques concernés :
+  - TRI  Métropole Francilienne (risques : Inondation, Par une crue à débordement lent de cours d'eau) sur la commune de Paris
+```
+
+Si un risque ne peut pas être évalué (API Géorisques indisponible, endpoint retiré…), les autres risques sont tout de même renvoyés et le texte le signale :
+
+```
+Le risque « Catastrophes naturelles (CatNat) » n'a pas pu être évalué : Erreur lors de l'appel à l'API Géorisques 'api/v1/gaspar/catnat' : 410 Gone (endpoint retiré par Géorisques : configurez API_V2_TOKEN pour utiliser l'API v2)
 ```
 
 :::tip
@@ -60,4 +63,5 @@ Cet outil est idéal quand l'agent IA a besoin d'un résumé textuel des risques
 
 La plupart des risques sont évalués dans un **rayon de 5 km** autour des coordonnées fournies, à l’exception de :
 - **Argiles** : évaluation ponctuelle (pas de rayon)
-- **Installations nucléaires** : rayon défini par l'API Géorisques
+- **Plans de prévention des inondations (PPRN)** : commune de l'adresse en v1, rayon de 5 km en v2
+- **Installations nucléaires** : rayon défini par l'API Géorisques en v1, 5 km en v2

@@ -24,16 +24,21 @@ Le serveur expose 4 outils MCP :
 | `argiles` | Retrait-gonflement des argiles | `/api/v1/rga` | `/api/v2/rga` |
 | `mouvement_terrain` | Mouvements de terrain | `/api/v1/mvt` | `/api/v2/mvt` |
 | `cavites` | Cavités souterraines | `/api/v1/cavites` | `/api/v2/cavites` |
-| `inondations` | Inondations (TRI, AZI, PAPI, PPRN) | `/api/v1/gaspar/tri`, `azi`, `papi`, `/api/v1/ppr` | `/api/v2/gaspar/tri`, `azi`, `papi`, `pprn` |
-| `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` | — |
+| `inondations` | Inondations (TRI, AZI, PAPI, PPRN) | `/api/v1/gaspar/tri`, `azi`, `papi`, `pprn` | `/api/v2/gaspar/tri`, `azi`, `papi`, `pprn` |
+| `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` | `/api/v2/gaspar/catnat` |
 | `icpe` | Installations classées Seveso (ICPE) | `/api/v1/installations_classees` | `/api/v2/installations_classees` |
 | `installations_nucleaires` | Installations nucléaires | `/api/v1/installations_nucleaires` | `/api/v2/installations_nucleaires` |
 
-Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKEN` est configurée (jeton d'authentification Géorisques). Sinon, les endpoints v1 publics sont utilisés.
+Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKEN` est configurée (jeton d'authentification Géorisques, gratuit). Sinon, les endpoints v1 publics sont utilisés.
+
+> [!WARNING]
+> Depuis fin 2026, la spécification OpenAPI de Géorisques documente une réponse `410 Gone` pour les endpoints v1 (hors PPR) : leur retrait est annoncé, sans date à ce jour. Configurer un jeton v2 est recommandé. Si un risque ne peut pas être évalué, les outils renvoient les autres risques et signalent l'erreur au lieu d'échouer entièrement.
+
+En v1, l'endpoint `gaspar/pprn` ne prend pas de rayon : les plans de prévention sont recherchés sur la commune de l'adresse (rayon de 5 km en v2).
 
 ### Carte interactive
 
-L'outil `carte_exposition_risques` inclut une application web embarquée (MCP App) basée sur [MapLibre GL](https://maplibre.org/) qui affiche les couches de risques sur un fond de carte, avec contrôle des couches et légendes.
+L'outil `carte_exposition_risques` inclut une application web embarquée ([MCP App](https://modelcontextprotocol.io/extensions/apps)) basée sur [MapLibre GL](https://maplibre.org/) qui affiche les couches de risques sur un fond Plan IGN, avec contrôle des couches et légendes.
 
 ## Prérequis
 
@@ -43,13 +48,16 @@ L'outil `carte_exposition_risques` inclut une application web embarquée (MCP Ap
 
 ### Sans installation locale (via `npx`)
 
-Le moyen le plus rapide de connecter le serveur a un client MCP est de le lancer en stdio directement depuis GitHub :
+Le moyen le plus rapide de connecter le serveur à un client MCP est de le lancer en stdio directement depuis GitHub :
 
 ```bash
-npx -y github:MAIF/risques-majeurs-mcp --stdio
+npx -y --allow-git=all github:MAIF/risques-majeurs-mcp --stdio
 ```
 
-Au premier appel, npx clone le repo, installe les dependances et execute le build (`tsc` + `vite`) via le script `prepare`. Les appels suivants reutilisent le cache de npx.
+Au premier appel, npx clone le dépôt, installe les dépendances et exécute le build (`tsc` + `vite`) via le script `prepare`. Les appels suivants réutilisent le cache de npx.
+
+> [!NOTE]
+> Depuis npm 12, l'installation de paquets depuis un dépôt git est désactivée par défaut (erreur `EALLOWGIT`). L'option `--allow-git=all` l'autorise pour cette commande ; elle est sans effet sur npm 11 (où c'est déjà le comportement par défaut).
 
 Configuration MCP correspondante :
 
@@ -58,7 +66,7 @@ Configuration MCP correspondante :
   "mcpServers": {
     "risques-majeurs": {
       "command": "npx",
-      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+      "args": ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }
@@ -89,12 +97,14 @@ Le serveur démarre sur `http://localhost:3000/mcp` et peut être configuré via
 | Variable | Description | Défaut |
 |---|---|---|
 | `PORT` | Port d'écoute du serveur | `3000` |
-| `NODE_ENV` | `development` pour écouter sur `127.0.0.1`, sinon `0.0.0.0` | — |
+| `NODE_ENV` | `development` pour écouter sur `127.0.0.1` (avec validation des en-têtes `Host` et `Origin`), sinon `0.0.0.0` | — |
 | `CORS_ORIGIN` | Origine autorisée pour les requêtes CORS | `*` |
 | `RATE_LIMIT_WINDOW_MS` | Fenêtre de temps du rate limiting (en ms) | `60000` |
 | `RATE_LIMIT_MAX` | Nombre max de requêtes par fenêtre par IP | `100` |
 | `TRUST_PROXY` | Configure Express `trust proxy` (`true`, `false`, un nombre de sauts, `loopback`, une IP ou un CIDR). Nécessaire derrière un reverse-proxy (nginx, ngrok, Cloudflare…) pour que le rate-limit identifie correctement l'IP client | — |
-| `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés) | `` |
+| `ALLOWED_HOSTS` | Liste (séparée par des virgules) des noms d'hôte acceptés dans l'en-tête `Host` (protection contre le DNS rebinding lorsque le serveur écoute sur `0.0.0.0`) | — |
+| `ALLOWED_ORIGINS` | Liste (séparée par des virgules) des origines acceptées dans l'en-tête `Origin` (une origine non listée reçoit une erreur 403) | — |
+| `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés) | — |
 
 ### Configuration MCP
 
@@ -114,7 +124,7 @@ Pour connecter ce serveur à un client MCP, ajoutez-le dans votre configuration 
 
 Le serveur supporte deux transports MCP :
 
-- **Streamable HTTP** (par défaut) — [spec](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http). Mode **stateless** : chaque requête est indépendante et aucun identifiant de session n'est généré. Tous les outils exposés étant en lecture seule et idempotents, il n'y a pas besoin de maintenir un état entre les requêtes.
+- **Streamable HTTP** (par défaut) — conforme à la [spécification MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http) : protocole **sans état**, sans session ni handshake `initialize` (la version du protocole et les informations du client accompagnent chaque requête), découverte via `server/discover`. Les clients plus anciens (révisions 2025-03-26 à 2025-11-25) restent servis en mode stateless : une instance par requête, sans `Mcp-Session-Id`. Les requêtes `GET` et `DELETE` sur `/mcp` reçoivent une réponse `405`. Tous les outils exposés étant en lecture seule et idempotents, aucun état n'est conservé entre les requêtes.
 - **stdio** — pour les clients qui lancent le serveur comme sous-processus (Claude Desktop, Codex CLI, etc.). Activé via le flag `--stdio` (ou la variable d'environnement `MCP_TRANSPORT=stdio`) :
 
 ```bash
@@ -125,16 +135,18 @@ npm run start-dev-stdio
 node dist/index.js --stdio
 ```
 
-En mode stdio, le serveur n'écoute pas sur HTTP ; toute la communication passe par stdin/stdout. Les logs sont redirigés vers stderr pour ne pas corrompre le flux JSON-RPC.
+En mode stdio, le serveur n'écoute pas sur HTTP ; toute la communication passe par stdin/stdout. Les deux générations du protocole sont acceptées (2026-07-28 et handshake `initialize` des révisions 2025). Les logs sont redirigés vers stderr pour ne pas corrompre le flux JSON-RPC.
+
+Le serveur est construit avec le [SDK TypeScript MCP v2](https://github.com/modelcontextprotocol/typescript-sdk) (`@modelcontextprotocol/server`, `createMcpHandler` et `serveStdio`).
 
 ## Architecture
 
 ```
 server/
-  index.ts       # Point d'entrée Express, transport Streamable HTTP
+  index.ts       # Point d'entrée : Express + Streamable HTTP (createMcpHandler) ou stdio (serveStdio)
   server.ts      # Définition du serveur MCP et des outils
   risques.ts     # Définition des risques (fetch, schémas, texte, couches carte)
-  utils.ts       # Helpers (appels API Géorisques, sources WMS, icônes SVG)
+  utils.ts       # Helpers (appels API Géorisques, dates, sources WMS, icônes SVG)
 client/
   mcp-app.html   # Page HTML de l'application carte
   mcp-app.ts     # Application MCP App (MapLibre GL)
@@ -145,8 +157,7 @@ client/
 ## APIs externes utilisées
 
 - **[Géorisques](https://www.georisques.gouv.fr/)** — Données et services WMS sur les risques naturels et technologiques (Ministère de la Transition Écologique)
-- **[Géoplateforme IGN](https://data.geopf.fr/)** — Géocodage des adresses en France
-- **[CARTO](https://carto.com/)** — Tuiles de fond de carte
+- **[Géoplateforme IGN](https://data.geopf.fr/)** — Géocodage des adresses en France et fond de carte (Plan IGN v2)
 
 ## Licence
 

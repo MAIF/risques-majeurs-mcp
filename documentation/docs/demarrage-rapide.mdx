@@ -19,7 +19,7 @@ La méthode la plus simple consiste à laisser le client MCP **lancer le serveur
   "mcpServers": {
     "risques-majeurs": {
       "command": "npx",
-      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+      "args": ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }
@@ -28,11 +28,15 @@ La méthode la plus simple consiste à laisser le client MCP **lancer le serveur
 Pour **Claude Code** :
 
 ```bash
-claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio
+claude mcp add risques-majeurs -- npx -y --allow-git=all github:MAIF/risques-majeurs-mcp --stdio
 ```
 
 :::tip
-Au premier lancement, npx clone le repo, installé les dépendances et exécute le build (`tsc` + `vite`) — comptez quelques secondes. Les appels suivants réutilisent le cache de npx, donc le démarrage est instantané.
+Au premier lancement, npx clone le dépôt, installe les dépendances et exécute le build (`tsc` + `vite`) — comptez quelques secondes. Les appels suivants réutilisent le cache de npx, donc le démarrage est instantané.
+:::
+
+:::note npm 12
+Depuis npm 12, l'installation de paquets depuis un dépôt git est désactivée par défaut (erreur `EALLOWGIT`). L'option `--allow-git=all` l'autorise pour cette commande uniquement ; elle est sans effet sur npm 11, où c'est déjà le comportement par défaut.
 :::
 
 C'est le mode recommandé pour la plupart des utilisateurs. Si vous voulez modifier le code ou développer sur le projet, suivez plutôt le parcours ci-dessous.
@@ -125,9 +129,11 @@ Essayez par exemple de demander à votre assistant :
 | Variable | Description | Défaut |
 |---|---|---|
 | `PORT` | Port d'écoute du serveur HTTP | `3000` |
-| `NODE_ENV` | `development` pour écouter sur `127.0.0.1`, sinon `0.0.0.0` | — |
+| `NODE_ENV` | `development` pour écouter sur `127.0.0.1` (avec validation des en-têtes `Host` et `Origin`), sinon `0.0.0.0` | — |
 | `CORS_ORIGIN` | Origine autorisée pour les requêtes CORS | `*` |
 | `RATE_LIMIT_WINDOW_MS` | Fenêtre de temps du rate limiting (en ms) | `60000` |
 | `RATE_LIMIT_MAX` | Nombre max de requêtes par fenêtre par IP | `100` |
 | `TRUST_PROXY` | Configure Express `trust proxy` (`true`, `false`, un nombre de sauts, `loopback`, une IP ou un CIDR). Nécessaire derrière un reverse-proxy (nginx, ngrok, Cloudflare…) pour que le rate-limit identifie correctement l'IP client | — |
-| `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés) | — |
+| `ALLOWED_HOSTS` | Noms d'hôte acceptés dans l'en-tête `Host`, séparés par des virgules (protection contre le DNS rebinding lorsque le serveur écoute sur `0.0.0.0`) | — |
+| `ALLOWED_ORIGINS` | Origines acceptées dans l'en-tête `Origin`, séparées par des virgules (une origine non listée reçoit une erreur 403) | — |
+| `API_V2_TOKEN` | Jeton d'authentification Géorisques (si configuré, les endpoints V2 sont utilisés). Recommandé : les endpoints v1 sont annoncés comme retirés à terme | — |

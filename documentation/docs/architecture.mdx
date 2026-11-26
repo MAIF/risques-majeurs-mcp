@@ -10,6 +10,8 @@ description: Architecture technique du serveur Risques Majeurs MCP
 
 Le serveur supporte **deux transports MCP** au choix : **stdio** (le client lance le serveur comme sous-processus) et **Streamable HTTP** (le serveur écoute sur un port). Les deux modes partagent exactement le même `McpServer` et les mêmes outils — seule la couche transport change.
 
+Le serveur est construit avec le [SDK TypeScript MCP v2](https://github.com/modelcontextprotocol/typescript-sdk) (`@modelcontextprotocol/server`) et implémente la révision **2026-07-28** de la spécification MCP, tout en restant compatible avec les clients des révisions 2025 (2025-03-26 à 2025-11-25).
+
 ```mermaid
 flowchart TB
     subgraph Clients
@@ -21,9 +23,9 @@ flowchart TB
 
     subgraph "Risques Majeurs MCP"
         IDX[index.ts]
-        STDIO[StdioServerTransport]
+        STDIO[serveStdio]
         EX[Express HTTP]
-        TR[StreamableHTTPServerTransport]
+        TR[createMcpHandler]
         SRV[McpServer]
         T1[geocodage]
         T2[liste_risques]
@@ -36,7 +38,7 @@ flowchart TB
         IGN[Géoplateforme IGN]
         GR[Géorisques API]
         WMS[Géorisques WMS]
-        CARTO[CARTO tiles]
+        PLAN[Plan IGN WMTS]
     end
 
     CD -->|stdin/stdout| IDX
@@ -53,7 +55,7 @@ flowchart TB
     T1 -->|geocodage| IGN
     T3 & T4 -->|risques| GR
     RES -->|couches carte| WMS
-    RES -->|fond de carte| CARTO
+    RES -->|fond de carte| PLAN
 ```
 
 ## Structure du projet
@@ -61,10 +63,10 @@ flowchart TB
 ```
 risques-majeurs-mcp/
 ├── server/                 # Code serveur (TypeScript, compile par tsc)
-│   ├── index.ts            # Point d'entrée Express + transport MCP
+│   ├── index.ts            # Point d'entrée : Express + Streamable HTTP, ou stdio
 │   ├── server.ts           # Définition du serveur MCP et des outils
 │   ├── risques.ts          # Définition des 7 risques (fetch, schéma, texte, couches)
-│   └── utils.ts            # Helpers (appels API, sources WMS, icones SVG)
+│   └── utils.ts            # Helpers (appels API, dates, sources WMS, icônes SVG)
 ├── client/                 # Application carte (TypeScript, bundle par Vite)
 │   ├── mcp-app.html        # Page HTML
 │   ├── mcp-app.ts          # App MCP (MapLibre GL)
@@ -88,36 +90,40 @@ flowchart LR
     START([node dist/index.js]) --> CHECK{--stdio<br/>ou MCP_TRANSPORT=stdio ?}
     CHECK -->|oui| RUNSTDIO[runStdio]
     CHECK -->|non| RUNHTTP[runHttp]
-    RUNSTDIO --> SCRV1[createServer]
-    RUNSTDIO --> ST[StdioServerTransport]
-    SCRV1 --> CONN1[server.connect transport]
-    ST --> CONN1
-    RUNHTTP --> EXPRESS[Express + CORS + rate-limit]
-    EXPRESS --> LOOP[Pour chaque POST /mcp:]
-    LOOP --> SCRV2[createServer]
-    LOOP --> HT[StreamableHTTPServerTransport]
-    SCRV2 --> CONN2[server.connect transport]
-    HT --> CONN2
+    RUNSTDIO --> ST[serveStdio createServer]
+    ST --> ERA1{2026-07-28 ou initialize ?}
+    ERA1 --> SCRV1[Instance unique pour la connexion]
+    RUNHTTP --> EXPRESS[Express + Host/Origin + CORS + rate-limit]
+    EXPRESS --> HANDLER[createMcpHandler createServer]
+    HANDLER --> LOOP[Pour chaque POST /mcp]
+    LOOP --> ERA2{2026-07-28 ou 2025 ?}
+    ERA2 --> SCRV2[Nouvelle instance par requête]
 ```
 
 ### Mode Streamable HTTP (par défaut)
 
-Le serveur écoute sur `http://localhost:3000/mcp`. Chaque requête HTTP crée une nouvelle instance du `McpServer` et du transport, sans gestion de sessions. C'est un choix délibéré : tous les outils exposés sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un état entre les requêtes.
+Le serveur écoute sur `http://localhost:3000/mcp`. Les requêtes sont traitées par `createMcpHandler` (SDK v2), branché sur Express via `toNodeHandler` (`@modelcontextprotocol/node`). Chaque requête HTTP crée une nouvelle instance du `McpServer`, sans gestion de sessions. C'est un choix délibéré : tous les outils exposés sont en lecture seule et idempotents, il n'y a donc pas besoin de maintenir un état entre les requêtes.
+
+Le handler sert les deux générations du protocole :
+
+- **Clients 2026-07-28** : le protocole est sans état par conception. Il n'y a ni handshake `initialize` ni en-tête `Mcp-Session-Id` : chaque requête porte dans `params._meta` la version du protocole, les capacités et l'identité du client, et les en-têtes `MCP-Protocol-Version`, `Mcp-Method` (et `Mcp-Name` pour `tools/call` / `resources/read`) permettent le routage. Le client découvre le serveur avec `server/discover`.
+- **Clients 2025** (révisions 2025-03-26 à 2025-11-25) : repli *stateless*, avec une instance par requête et sans identifiant de session.
+
+Les requêtes `GET` et `DELETE` sur `/mcp` reçoivent une réponse `405` : il n'y a ni flux SSE autonome ni session à fermer. `createMcpExpressApp` (`@modelcontextprotocol/express`) valide les en-têtes `Host` et `Origin` lorsque le serveur écoute sur `127.0.0.1`, ou selon `ALLOWED_HOSTS` / `ALLOWED_ORIGINS` (une origine invalide reçoit une erreur 403).
 
 ```mermaid
 sequenceDiagram
     participant C as Client MCP
     participant E as Express
-    participant T as StreamableHTTPServerTransport
+    participant H as createMcpHandler
     participant S as McpServer
 
-    C->>E: POST /mcp (JSON-RPC)
-    E->>S: createServer()
-    E->>T: new StreamableHTTPServerTransport()
-    S->>T: server.connect(transport)
-    T->>T: handleRequest(req, res, body)
-    T-->>C: Réponse JSON-RPC (event-stream)
-    Note over T,S: Instance fermée à la fin de la requête
+    C->>E: POST /mcp (JSON-RPC, _meta protocolVersion 2026-07-28)
+    E->>H: toNodeHandler(req, res, body)
+    H->>S: createServer()
+    S-->>H: résultat
+    H-->>C: Réponse JSON-RPC (JSON ou event-stream)
+    Note over H,S: Instance fermée à la fin de la requête
     C->>E: POST /mcp (autre requête)
     Note right of E: Nouvelle instance créée à chaque requête
 ```
@@ -132,13 +138,13 @@ Le client MCP lance le serveur comme sous-processus et communique via stdin (req
 sequenceDiagram
     participant C as Client MCP (Claude Desktop, Codex…)
     participant P as Processus node
-    participant T as StdioServerTransport
+    participant T as serveStdio
     participant S as McpServer
 
     C->>P: spawn(node dist/index.js --stdio)
-    P->>S: createServer()
-    P->>T: new StdioServerTransport()
-    S->>T: server.connect(transport)
+    P->>T: serveStdio(createServer)
+    C->>T: première requête (server/discover ou initialize)
+    T->>S: createServer() pour la génération détectée
     Note over T: stdout réservé au protocole<br/>console.log redirigé vers stderr
     C->>T: JSON-RPC (stdin)
     T->>S: tool call
@@ -150,7 +156,7 @@ sequenceDiagram
     P->>S: server.close()
 ```
 
-Avantages : pas de port à ouvrir, démarrage simple via `npx github:MAIF/risques-majeurs-mcp --stdio`, isolation par client.
+Avantages : pas de port à ouvrir, démarrage simple via `npx -y --allow-git=all github:MAIF/risques-majeurs-mcp --stdio`, isolation par client.
 
 ### Comparatif
 
@@ -170,7 +176,7 @@ Le build se fait en deux etapes :
 1. **Serveur** : `tsc` compile les fichiers TypeScript de `server/` vers `dist/` (target ES2024, modules Node16)
 2. **Client** : Vite bundle `client/mcp-app.html` en un **fichier HTML unique** (via `vite-plugin-singlefile`) dans `dist/client/`
 
-Le fichier HTML unique est ensuite servi comme ressource MCP par le serveur, ce qui permet au client MCP d'afficher la carte directement.
+Le fichier HTML unique est ensuite servi comme ressource MCP (`text/html;profile=mcp-app`) par le serveur, ce qui permet au client MCP d'afficher la carte directement. MapLibre GL v6 chargeant son worker depuis une URL, le code du worker est embarqué dans la page et exposé via une URL `blob:`. La ressource déclare dans sa CSP les seuls domaines contactés : `data.geopf.fr` (fond de carte) et `www.georisques.gouv.fr` (couches WMS et légendes).
 
 ## Définition d'un risque
 

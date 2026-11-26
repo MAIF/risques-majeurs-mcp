@@ -9,12 +9,16 @@ description: Configurer Risques Majeurs MCP dans Claude, Claude Code, OpenAI, Co
 Risques Majeurs MCP supporte **deux modes de connexion** :
 
 - **stdio** — le client lance le serveur comme sous-processus et communique via stdin/stdout. C'est le mode le plus simple : avec `npx github:MAIF/risques-majeurs-mcp`, aucune installation locale n'est requise.
-- **Streamable HTTP** — le serveur écoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter. Pratique en développement (hot-reload) ou pour partager une instance entre plusieurs clients.
+- **Streamable HTTP** — le serveur écoute sur `http://localhost:3000/mcp`, tout client MCP peut s'y connecter. Pratique en développement (hot-reload) ou pour partager une instance entre plusieurs clients. Le serveur implémente la révision [2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http) du protocole (sans session) et reste compatible avec les clients des révisions 2025.
 
 Selon le client, l'un ou l'autre est plus simple. Cette page détaille les deux pour les principales plateformes IA.
 
+:::note npm 12
+Depuis npm 12, l'installation de paquets depuis un dépôt git est désactivée par défaut (erreur `EALLOWGIT`). L'option `--allow-git=all` l'autorise pour cette commande uniquement ; elle est sans effet sur npm 11, où c'est déjà le comportement par défaut.
+:::
+
 :::tip
-- En **stdio via `npx`** : la commande clone, installé et build le serveur à la volée. Premier appel ≈ 5 s, ensuite c'est instantané (cache npx).
+- En **stdio via `npx`** : la commande clone, installe et build le serveur à la volée. Premier appel ≈ 5 s, ensuite c'est instantané (cache npx).
 - En **stdio via chemin local** : utile si vous développez sur le projet (clone + `npm install`, puis pointez vers `dist/index.js`).
 - En **HTTP** : lancez d'abord le serveur (`npm run start-dev`), puis configurez l'URL dans votre client.
 :::
@@ -38,7 +42,7 @@ Claude Desktop lance le serveur comme sous-processus, sans installation locale :
   "mcpServers": {
     "risques-majeurs": {
       "command": "npx",
-      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+      "args": ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }
@@ -82,7 +86,7 @@ CLI d'Anthropic pour les développeurs.
 ### En stdio via npx (recommandé)
 
 ```bash
-claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio
+claude mcp add risques-majeurs -- npx -y --allow-git=all github:MAIF/risques-majeurs-mcp --stdio
 ```
 
 ### En stdio depuis un clone local
@@ -150,7 +154,7 @@ Codex supporte nativement le transport stdio :
 ```toml
 [mcp_servers.risques-majeurs]
 command = "npx"
-args = ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+args = ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
 ```
 
 ### En stdio depuis un clone local
@@ -221,7 +225,7 @@ Le [Gemini CLI](https://github.com/google-gemini/gemini-cli) de Google supporte 
   "mcpServers": {
     "risques-majeurs": {
       "command": "npx",
-      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+      "args": ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }

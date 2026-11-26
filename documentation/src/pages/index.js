@@ -30,11 +30,10 @@ const features = [
     description: (
       <>
         S'appuie sur les API publiques de{' '}
-        <Link href="https://www.georisques.gouv.fr/">Géorisques</Link>,{' '}
-        de la{' '}
+        <Link href="https://www.georisques.gouv.fr/">Géorisques</Link>{' '}
+        et de la{' '}
         <Link href="https://data.geopf.fr/">Géoplateforme IGN</Link>{' '}
-        et des fonds de carte{' '}
-        <Link href="https://carto.com/">CARTO</Link>.
+        (géocodage et fond de carte Plan IGN).
         Données ouvertes, transparentes et à jour.
       </>
     ),
@@ -121,7 +120,7 @@ function QuickStartSection() {
   "mcpServers": {
     "risques-majeurs": {
       "command": "npx",
-      "args": ["-y", "github:MAIF/risques-majeurs-mcp", "--stdio"]
+      "args": ["-y", "--allow-git=all", "github:MAIF/risques-majeurs-mcp", "--stdio"]
     }
   }
 }`;
@@ -139,7 +138,7 @@ function QuickStartSection() {
           Avec <strong>Claude Code</strong>, une seule commande suffit :
         </p>
         <CodeBlock language="bash">
-          {`claude mcp add risques-majeurs -- npx -y github:MAIF/risques-majeurs-mcp --stdio`}
+          {`claude mcp add risques-majeurs -- npx -y --allow-git=all github:MAIF/risques-majeurs-mcp --stdio`}
         </CodeBlock>
         <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <Link className="button button--primary" to="/docs/demarrage-rapide">
