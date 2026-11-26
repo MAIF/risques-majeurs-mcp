@@ -84,6 +84,9 @@ const ALEAS = {
   },
   // 127 : Tassements différentiels (retrait-gonflement des argiles)
   argiles: { codesV2: ['SEC'], couvert: codes => codes.has('127') },
+  // Risques littoraux : 117 (submersion marine), 125 (avancée dunaire),
+  // 126 (recul du trait de côte et de falaises)
+  littoral: { codesV2: ['SUBMAR', 'RTC'], couvert: codes => ['117', '125', '126'].some(c => codes.has(c)) },
   // 14 : Avalanche
   avalanche: { codesV2: ['AVAL'], couvert: codes => codes.has('14') },
   // 16 : Feu de forêt
@@ -1281,6 +1284,33 @@ export const RISQUES = [
         },
         legend: (exposition: any) : Node => makeLegends([
           [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#f08a02', strokeColor: '#c6780f', strokeWidth: 4 })!, 'Zone à risque d\'incendie entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
+
+
+  //========== RISQUE - Risques littoraux ==========//
+
+  risquePpr({
+    code: 'littoral',
+    libelle: 'Risques littoraux (submersion marine, recul du trait de côte)',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-L', 'PPRN-Multi'],
+    libelleRisque: 'Risques littoraux',
+    alea: ALEAS.littoral,
+    libelleSection: 'plans de prévention des risques littoraux',
+    description: "Plans de Prévention des Risques Naturels (PPRN) littoraux : submersion marine, recul du trait de côte",
+    layers: [
+      {
+        id: 'littoral',
+        nom: 'PPR Littoral',
+        source: (exposition: any) => makeRasterGeorisqueSource('PPRN_COMMUNE_SUBMAR_APPROUV'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.7, fillColor: '#125f8f', strokeColor: '#125f8f', strokeWidth: 4 })!, 'Commune concernée par un PPR submersion marine approuvé']
         ])
       }
     ]
