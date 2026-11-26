@@ -107,3 +107,168 @@ describe("inondations.fetch (v1)", () => {
     expect(pprnCall).not.toContain('codesAlea');
   });
 });
+
+// --- Helpers de test : simule les réponses de l'API Géorisques par chemin ---
+const stubGeorisques = (payloads: Record<string, any>) => {
+  const fetchMock = vi.fn().mockImplementation((url: string) => {
+    const path = new URL(url).pathname;
+    const body = payloads[path];
+    return Promise.resolve({
+      ok: true,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: vi.fn().mockResolvedValue(body ?? { data: [], totalElements: 0, content: [] }),
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
+const risque = (code: string) => (RISQUES as any[]).find(r => r.code === code);
+
+describe('fetch / outputSchema / text (v1)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("argiles : texte sans accolade parasite et score 0 quand l'API ne renvoie rien", async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers() }));
+    const r = risque('argiles');
+    const exposition = await r.fetch(2.3522, 48.8566);
+    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0 });
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(r.text(exposition)).toBe("Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Non exposé (score de 0 sur 3)");
+  });
+
+  it('mouvement_terrain : accepte les champs null renvoyés par la v1', async () => {
+    stubGeorisques({
+      '/api/v1/mvt': {
+        data: [
+          { type: 'Effondrement / Affaissement', lieu: null, commentaire_lieu: null, date_debut: null, longitude: 4.3, latitude: 43.8 },
+          { type: 'Chute de blocs / Eboulement', lieu: 'Carrière du Chemin de la Cigale', commentaire_lieu: null, date_debut: '1980-01-01', longitude: 4.31, latitude: 43.81 },
+        ],
+      },
+    });
+    const r = risque('mouvement_terrain');
+    const exposition = await r.fetch(4.3601, 43.8367);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    const text = r.text(exposition);
+    expect(text).not.toContain('null');
+    expect(text).not.toMatch(/,\n/);
+    expect(text).toContain('\n  - Effondrement / Affaissement\n  - Chute de blocs / Eboulement au lieu Carrière du Chemin de la Cigale le 01/01/1980');
+  });
+
+  it('cavites : regroupe par type sans virgule parasite', async () => {
+    stubGeorisques({
+      '/api/v1/cavites': {
+        data: [
+          { type: 'naturelle', nom: 'Aven de la CIGALE', longitude: 4.3, latitude: 43.8 },
+          { type: 'naturelle', nom: 'Source du BRIQUET', longitude: 4.3, latitude: 43.8 },
+          { type: 'carrière', nom: null, longitude: 4.3, latitude: 43.8 },
+        ],
+      },
+    });
+    const r = risque('cavites');
+    const exposition = await r.fetch(4.3601, 43.8367);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    const text = r.text(exposition);
+    expect(text).not.toMatch(/,\n/);
+    expect(text).toContain('Cavités de type "naturelle" :\n  - Aven de la CIGALE\n  - Source du BRIQUET');
+    expect(text).toContain('Cavités de type "carrière" :\n  - Cavité sans nom');
+  });
+
+  it('inondations : sortie valide et périmètre PPR limité à la commune en v1', async () => {
+    stubGeorisques({
+      '/api/v1/gaspar/tri': {
+        data: [{ libelle_tri: 'TRI Métropole Francilienne', liste_libelle_risque: [{ libelle_risque_long: 'Inondation' }], code_insee: '75056', libelle_commune: 'Paris', date_arrete_pcb: '27/11/2012' }],
+      },
+      '/api/v1/gaspar/azi': {
+        data: [{ libelle_azi: 'BV Vidourle', liste_libelle_risque: [], code_insee: null, libelle_commune: null, date_debut_information: null }],
+      },
+      '/api/v1/gaspar/pprn': {
+        totalElements: 1,
+        content: [{ libPpr: 'PPRN-I - Nîmes', modeleProcedure: 'PPRN-I', dateModification: '19/11/2026' }],
+      },
+    });
+    const r = risque('inondations');
+    const exposition = await r.fetch(4.3601, 43.8367);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.tri.zones[0].date).toBe('2012-11-27');
+    expect(exposition.azi.zones[0]).toMatchObject({ code_insee: '', commune: '', date: null });
+    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'commune' });
+    const text = r.text(exposition);
+    expect(text).not.toMatch(/,\n/);
+    expect(text).toContain("1 plans de prévention des inondations recensés sur la commune de l'adresse indiquée.");
+    expect(text).toContain('PPRN-I - Nîmes (mis à jour le 19/11/2026)');
+  });
+
+  it("inondations : n'envoie pas de rayon à api/v1/gaspar/pprn (paramètre inexistant)", async () => {
+    const fetchMock = stubGeorisques({});
+    await risque('inondations').fetch(4.3601, 43.8367);
+    const pprnCall = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v1/gaspar/pprn'));
+    expect(pprnCall).toBeDefined();
+    expect(pprnCall).not.toContain('rayon');
+  });
+
+  it('catnat : trie par date décroissante et ignore les dates absentes', async () => {
+    stubGeorisques({
+      '/api/v1/gaspar/catnat': {
+        data: [
+          { libelle_risque_jo: 'Inondations et/ou Coulées de Boue', code_insee: '30189', libelle_commune: 'Nîmes', date_debut_evt: '11/02/1987' },
+          { libelle_risque_jo: 'Sécheresse', code_insee: '30189', libelle_commune: 'Nîmes', date_debut_evt: null },
+          { libelle_risque_jo: 'Inondations et/ou Coulées de Boue', code_insee: '30189', libelle_commune: 'Nîmes', date_debut_evt: '03/10/1988' },
+        ],
+      },
+    });
+    const r = risque('catnat');
+    const exposition = await r.fetch(4.3601, 43.8367);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.catnat.map((c: any) => c.date)).toEqual(['1988-10-03', '1987-02-11', null]);
+    expect(r.text(exposition)).not.toMatch(/,\n/);
+  });
+
+  it('icpe : ne garde que les Seveso, quel que soit le format du statut', async () => {
+    stubGeorisques({
+      '/api/v1/installations_classees': {
+        data: [
+          { raisonSociale: 'A', statutSeveso: 'Seveso seuil haut', longitude: 4.9, latitude: 43.4 },
+          { raisonSociale: 'B', statutSeveso: 'SEUIL_BAS', longitude: 4.9, latitude: 43.4 },
+          { raisonSociale: 'C', statutSeveso: 'Non Seveso', longitude: 4.9, latitude: 43.4 },
+          { raisonSociale: 'D', statutSeveso: 'NON_SEVESO', longitude: 4.9, latitude: 43.4 },
+          { raisonSociale: 'E', statutSeveso: null, longitude: 4.9, latitude: 43.4 },
+        ],
+      },
+    });
+    const r = risque('icpe');
+    const exposition = await r.fetch(4.9, 43.4);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.installations.map((i: any) => [i.raisonSociale, i.seveso])).toEqual([
+      ['A', 'seveso_seuil_haut'],
+      ['B', 'seveso_seuil_bas'],
+    ]);
+  });
+
+  it('installations_nucleaires : rayon_ppi null quand il n\'y a pas de PPI', async () => {
+    stubGeorisques({
+      '/api/v1/installations_nucleaires': [
+        { nomInstallationNucleaire: 'Atalante', typeInstallationNucleaire: 'Activités de recherche', ppi: true, rayon_ppi: 10000.0, longitude: 4.7, latitude: 44.1 },
+        { nomInstallationNucleaire: 'Autre', typeInstallationNucleaire: 'Autre', ppi: false, rayon_ppi: null, longitude: 4.7, latitude: 44.1 },
+      ],
+    });
+    const r = risque('installations_nucleaires');
+    const exposition = await r.fetch(4.7, 44.1);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.installations.map((i: any) => i.rayon_ppi)).toEqual([10000, null]);
+  });
+});
