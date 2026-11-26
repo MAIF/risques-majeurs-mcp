@@ -84,6 +84,8 @@ const ALEAS = {
   },
   // 127 : Tassements différentiels (retrait-gonflement des argiles)
   argiles: { codesV2: ['SEC'], couvert: codes => codes.has('127') },
+  // 14 : Avalanche
+  avalanche: { codesV2: ['AVAL'], couvert: codes => codes.has('14') },
   // 16 : Feu de forêt
   feuForet: { codesV2: ['FEUFORET'], couvert: codes => codes.has('16') },
 } satisfies Record<string, Alea>;
@@ -1279,6 +1281,33 @@ export const RISQUES = [
         },
         legend: (exposition: any) : Node => makeLegends([
           [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#f08a02', strokeColor: '#c6780f', strokeWidth: 4 })!, 'Zone à risque d\'incendie entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
+
+
+  //========== RISQUE - Avalanches ==========//
+
+  risquePpr({
+    code: 'avalanche',
+    libelle: 'Avalanches',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-Av', 'PPRN-Multi'],
+    libelleRisque: 'Avalanche',
+    alea: ALEAS.avalanche,
+    libelleSection: 'plans de prévention des risques d\'avalanche',
+    description: "Plans de Prévention des Risques Naturels (PPRN) liés aux avalanches",
+    layers: [
+      {
+        id: 'avalanche',
+        nom: 'PPR Avalanche',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_AVALANCHE'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#2f2f2f', strokeColor: '#2c2c2c', strokeWidth: 4 })!, 'Zone à risque d\'avalanche entraînant une servitude d\'utilité publique (PPR approuvé)']
         ])
       }
     ]

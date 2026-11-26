@@ -11,6 +11,7 @@ describe('RISQUES', () => {
     'icpe',
     'installations_nucleaires',
     'feux_foret',
+    'avalanche',
     'risques_miniers',
   ];
 
@@ -672,3 +673,4 @@ const testRisquePprn = (code: string, modele: string, codesCouverts: string[], c
 };
 
 testRisquePprn('feux_foret', 'PPRN-IF', ['16'], ['FEUFORET']);
+testRisquePprn('avalanche', 'PPRN-Av', ['14'], ['AVAL']);
