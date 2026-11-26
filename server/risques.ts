@@ -84,6 +84,8 @@ const ALEAS = {
   },
   // 127 : Tassements différentiels (retrait-gonflement des argiles)
   argiles: { codesV2: ['SEC'], couvert: codes => codes.has('127') },
+  // 16 : Feu de forêt
+  feuForet: { codesV2: ['FEUFORET'], couvert: codes => codes.has('16') },
 } satisfies Record<string, Alea>;
 
 // Codes GASPAR des aléas et sous-aléas couverts par un PPR, d'après son détail v1
@@ -1254,6 +1256,33 @@ export const RISQUES = [
       }
     ]
   },
+
+
+  //========== RISQUE - Feux de forêt ==========//
+
+  risquePpr({
+    code: 'feux_foret',
+    libelle: 'Feux de forêt',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-IF', 'PPRN-Multi'],
+    libelleRisque: 'Feu de forêt',
+    alea: ALEAS.feuForet,
+    libelleSection: 'plans de prévention des risques d\'incendie de forêt',
+    description: "Plans de Prévention des Risques Naturels (PPRN) liés aux feux de forêt",
+    layers: [
+      {
+        id: 'feux_foret',
+        nom: 'PPR Feux de forêt',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_FEU'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#f08a02', strokeColor: '#c6780f', strokeWidth: 4 })!, 'Zone à risque d\'incendie entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
 
 
   //========== RISQUE - Risques miniers ==========//

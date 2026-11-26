@@ -10,6 +10,7 @@ describe('RISQUES', () => {
     'catnat',
     'icpe',
     'installations_nucleaires',
+    'feux_foret',
     'risques_miniers',
   ];
 
@@ -617,3 +618,57 @@ describe('risques_miniers.fetch (v1)', () => {
     expect(urls.every(u => !u.includes('/api/v1/gaspar/pprn'))).toBe(true);
   });
 });
+
+// Nouveaux risques fondés sur les PPRN : filtrage sur `modeleProcedure` et, pour les
+// PPRN-Multi, sur les aléas réellement couverts (détail v1).
+const testRisquePprn = (code: string, modele: string, codesCouverts: string[], codesV2: string[]) => {
+  describe(`${code}.fetch`, () => {
+    const originalToken = process.env.API_V2_TOKEN;
+
+    afterEach(() => {
+      if (originalToken !== undefined) {
+        process.env.API_V2_TOKEN = originalToken;
+      } else {
+        delete process.env.API_V2_TOKEN;
+      }
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    const aleas = (codes: string[]) => ({
+      communes: [{ aleas: codes.map(c => c.length === 2 ? { codeGaspar: c } : { codeGaspar: c.slice(0, 2), sousAlea: [{ codeGaspar: c }] }) }],
+    });
+
+    it(`v1 : retient ${modele} et les PPRN-Multi couvrant l'aléa, écarte les autres`, async () => {
+      delete process.env.API_V2_TOKEN;
+      stubGeorisques({
+        '/api/v1/gaspar/pprn': {
+          totalElements: 4,
+          content: [
+            { idGaspar: 'A', libPpr: `${modele} - Commune`, modeleProcedure: modele, dateModification: '01/02/2020' },
+            { idGaspar: 'B', libPpr: 'Multi couvrant', modeleProcedure: 'PPRN-Multi', dateModification: null },
+            { idGaspar: 'C', libPpr: 'Multi inondation', modeleProcedure: 'PPRN-Multi', dateModification: null },
+            { idGaspar: 'D', libPpr: 'PPRN-I - Commune', modeleProcedure: 'PPRN-I', dateModification: null },
+          ],
+        },
+        '/api/v1/gaspar/pprn/B': aleas(['11', ...codesCouverts]),
+        '/api/v1/gaspar/pprn/C': aleas(['11', '112']),
+      });
+      const r = risque(code);
+      const exposition = await r.fetch(5, 45);
+      expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+      expect(exposition.ppr.plans.map((p: any) => p.libelle)).toEqual([`${modele} - Commune`, 'Multi couvrant']);
+      expect(r.text(exposition)).toMatch(/^2 plans de prévention .* applicables à l'adresse indiquée\./);
+    });
+
+    it(`v2 : filtre via codesAlea=${codesV2.join(',')}`, async () => {
+      process.env.API_V2_TOKEN = 'token';
+      const fetchMock = stubGeorisques({});
+      await risque(code).fetch(5, 45);
+      const call = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprn'));
+      expect(new URL(call!).searchParams.getAll('codesAlea')).toEqual(codesV2);
+    });
+  });
+};
+
+testRisquePprn('feux_foret', 'PPRN-IF', ['16'], ['FEUFORET']);
