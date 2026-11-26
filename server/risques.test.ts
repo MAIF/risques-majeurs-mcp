@@ -10,6 +10,7 @@ describe('RISQUES', () => {
     'catnat',
     'icpe',
     'installations_nucleaires',
+    'risques_miniers',
   ];
 
   it('contains all expected risk codes in order', () => {
@@ -573,5 +574,46 @@ describe('PPRN-Multi (v1) : filtrage sur les aléas réellement couverts', () =>
       });
     }));
     expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
+  });
+});
+
+describe('risques_miniers.fetch (v1)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('interroge api/v1/gaspar/pprm et ne conserve que les PPRM', async () => {
+    const fetchMock = stubGeorisques({
+      '/api/v1/gaspar/pprm': {
+        totalElements: 2,
+        content: [
+          { idGaspar: '07DDT20120001', libPpr: 'PRIVAS/VEYRAS PPR Minier', modeleProcedure: 'PPRM', dateModification: '12/03/2019' },
+          { idGaspar: 'X', libPpr: 'Autre', modeleProcedure: 'PPRN-I', dateModification: null },
+        ],
+      },
+    });
+    const r = risque('risques_miniers');
+    const exposition = await r.fetch(4.6014, 44.7397);
+
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'adresse' });
+    expect(exposition.ppr.plans[0]).toEqual({ libelle: 'PRIVAS/VEYRAS PPR Minier', risque: 'Risque minier', commune: '', date: '2019-03-12' });
+    expect(r.text(exposition)).toBe(
+      "1 plans de prévention des risques miniers (PPRM) applicables à l'adresse indiquée. Voici la liste des plans de prévention :\n  - PRIVAS/VEYRAS PPR Minier (mis à jour le 12/03/2019)"
+    );
+    const urls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+    expect(urls.every(u => !u.includes('/api/v1/gaspar/pprn'))).toBe(true);
   });
 });

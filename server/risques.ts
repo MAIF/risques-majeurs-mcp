@@ -66,24 +66,24 @@ type Ppr = {
 };
 
 // Aléa ciblé par un bloc PPR :
-// - `codeV2` : valeur du paramètre `codesAlea` de l'API v2 (filtrage côté Géorisques) ;
+// - `codesV2` : valeur(s) du paramètre `codesAlea` de l'API v2 (filtrage côté Géorisques) ;
 // - `couvert` : prédicat sur les codes GASPAR (aléas et sous-aléas) couverts par un PPR,
 //   utilisé en v1 pour ne garder que les PPRN-Multi qui concernent réellement l'aléa.
-type Alea = { codeV2: string; couvert: (codes: Set<string>) => boolean };
+type Alea = { codesV2: string[]; couvert: (codes: Set<string>) => boolean };
 
 const SOUS_ALEAS_MOUVEMENT_TERRAIN = ['121', '122', '123', '124', '125', '126'];
 
 const ALEAS = {
   // 11 : Inondation (sous-aléas 112 à 117)
-  inondation: { codeV2: 'INOND', couvert: codes => codes.has('11') },
+  inondation: { codesV2: ['INOND'], couvert: codes => codes.has('11') },
   // 12 : Mouvement de terrain (sous-aléas 121 à 126, hors 127 traité par `argiles`)
   mouvementTerrain: {
-    codeV2: 'MVT',
+    codesV2: ['MVT'],
     couvert: codes => SOUS_ALEAS_MOUVEMENT_TERRAIN.some(c => codes.has(c))
       || (codes.has('12') && ![...codes].some(c => /^12\d$/.test(c)))
   },
   // 127 : Tassements différentiels (retrait-gonflement des argiles)
-  argiles: { codeV2: 'SEC', couvert: codes => codes.has('127') },
+  argiles: { codesV2: ['SEC'], couvert: codes => codes.has('127') },
 } satisfies Record<string, Alea>;
 
 // Codes GASPAR des aléas et sous-aléas couverts par un PPR, d'après son détail v1
@@ -143,7 +143,7 @@ const fetchPpr = async (
       rayon: RAYON,
       pageSize: '1000',
     });
-    if (alea) params.append('codesAlea', alea.codeV2);
+    alea?.codesV2.forEach(c => params.append('codesAlea', c));
     data = await callGeorisqueAPI(`api/v2/${endpointSuffix}`, params, empty, token);
     perimetre = 'rayon';
   } else {
@@ -250,6 +250,39 @@ const installationsSeveso = (installations: any[]) => {
 
 // Formate une liste d'éléments sous forme de puces pour les sorties textuelles.
 const bullets = (items: string[]) => items.map(i => `\n  - ${i}`).join('');
+
+// Définition d'un risque fondé uniquement sur des plans de prévention (bloc `ppr`).
+const risquePpr = (def: {
+  code: string;
+  libelle: string;
+  // Endpoint GASPAR (sans préfixe de version) et modèles de procédure retenus
+  endpoint: string;
+  modelesProcedure: string[];
+  libelleRisque: string;
+  alea?: Alea;
+  // Libellé utilisé dans la sortie texte (« N <libelleSection> applicables à l'adresse »)
+  libelleSection: string;
+  description: string;
+  layers: any[];
+}) => ({
+  code: def.code,
+  libelle: def.libelle,
+  fetch: async (longitude: number, latitude: number) => {
+    return {
+      ppr: await fetchPpr(longitude, latitude, def.endpoint, def.modelesProcedure, def.libelleRisque, def.alea)
+    };
+  },
+  outputSchema: z
+    .object({
+      ppr: pprSchema(def.description)
+    })
+    .optional()
+    .describe(`Exposition au risque ${def.libelle.toLowerCase()}`),
+  text: (exposition: any) => {
+    return pprText(def.libelleSection, exposition.ppr).trimStart();
+  },
+  layers: def.layers
+});
 
 
 export const RISQUES = [
@@ -1221,5 +1254,31 @@ export const RISQUES = [
       }
     ]
   },
+
+
+  //========== RISQUE - Risques miniers ==========//
+
+  risquePpr({
+    code: 'risques_miniers',
+    libelle: 'Risques miniers',
+    endpoint: 'gaspar/pprm',
+    modelesProcedure: ['PPRM'],
+    libelleRisque: 'Risque minier',
+    libelleSection: 'plans de prévention des risques miniers (PPRM)',
+    description: "Plans de Prévention des Risques Miniers (PPRM)",
+    layers: [
+      {
+        id: 'risques_miniers',
+        nom: 'PPR Minier',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_MINIER'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.35, fillColor: '#7f0000', strokeColor: '#7c1616', strokeWidth: 4 })!, 'Zone à risque minier entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
 
 ];
