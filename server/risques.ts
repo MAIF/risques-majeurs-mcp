@@ -56,33 +56,43 @@ const procedureV1 = (p: any, libelle: string, date: unknown) => {
 // autour d'un point, en filtrant côté serveur sur `modeleProcedure` (le paramètre
 // `codesAlea` n'est pas honoré par les endpoints v1, et garde une sémantique
 // stricte en v2 — défense en profondeur).
-// En v1, `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : la recherche
-// porte sur la commune du point. En v2, elle porte sur un rayon de 5 km.
+// En v1, `gaspar/pprn`, `gaspar/pprt` et `gaspar/pprm` ne prennent pas de rayon :
+// ils renvoient les plans dont le périmètre contient le point (plans applicables à
+// l'adresse). En v2, la recherche porte sur un rayon de 5 km.
 type Ppr = {
   total: number;
-  perimetre: 'commune' | 'rayon';
+  perimetre: 'adresse' | 'rayon';
   plans: Array<{ libelle: string; risque: string; commune: string; date: string | null }>;
 };
 
 // Aléa ciblé par un bloc PPR :
-// - `codeV2` : valeur du paramètre `codesAlea` de l'API v2 (filtrage côté Géorisques) ;
+// - `codesV2` : valeur(s) du paramètre `codesAlea` de l'API v2 (filtrage côté Géorisques) ;
 // - `couvert` : prédicat sur les codes GASPAR (aléas et sous-aléas) couverts par un PPR,
 //   utilisé en v1 pour ne garder que les PPRN-Multi qui concernent réellement l'aléa.
-type Alea = { codeV2: string; couvert: (codes: Set<string>) => boolean };
+type Alea = { codesV2: string[]; couvert: (codes: Set<string>) => boolean };
 
 const SOUS_ALEAS_MOUVEMENT_TERRAIN = ['121', '122', '123', '124', '125', '126'];
 
 const ALEAS = {
   // 11 : Inondation (sous-aléas 112 à 117)
-  inondation: { codeV2: 'INOND', couvert: codes => codes.has('11') },
+  inondation: { codesV2: ['INOND'], couvert: codes => codes.has('11') },
   // 12 : Mouvement de terrain (sous-aléas 121 à 126, hors 127 traité par `argiles`)
   mouvementTerrain: {
-    codeV2: 'MVT',
+    codesV2: ['MVT'],
     couvert: codes => SOUS_ALEAS_MOUVEMENT_TERRAIN.some(c => codes.has(c))
       || (codes.has('12') && ![...codes].some(c => /^12\d$/.test(c)))
   },
   // 127 : Tassements différentiels (retrait-gonflement des argiles)
-  argiles: { codeV2: 'SEC', couvert: codes => codes.has('127') },
+  argiles: { codesV2: ['SEC'], couvert: codes => codes.has('127') },
+  // Risques littoraux : 117 (submersion marine), 125 (avancée dunaire),
+  // 126 (recul du trait de côte et de falaises)
+  littoral: { codesV2: ['SUBMAR', 'RTC'], couvert: codes => ['117', '125', '126'].some(c => codes.has(c)) },
+  // 13 : Séisme
+  seisme: { codesV2: ['SEISM'], couvert: codes => codes.has('13') },
+  // 14 : Avalanche
+  avalanche: { codesV2: ['AVAL'], couvert: codes => codes.has('14') },
+  // 16 : Feu de forêt
+  feuForet: { codesV2: ['FEUFORET'], couvert: codes => codes.has('16') },
 } satisfies Record<string, Alea>;
 
 // Codes GASPAR des aléas et sous-aléas couverts par un PPR, d'après son détail v1
@@ -142,7 +152,7 @@ const fetchPpr = async (
       rayon: RAYON,
       pageSize: '1000',
     });
-    if (alea) params.append('codesAlea', alea.codeV2);
+    alea?.codesV2.forEach(c => params.append('codesAlea', c));
     data = await callGeorisqueAPI(`api/v2/${endpointSuffix}`, params, empty, token);
     perimetre = 'rayon';
   } else {
@@ -152,7 +162,7 @@ const fetchPpr = async (
       page_size: '1000',
     });
     data = await callGeorisqueAPI(`api/v1/${endpointSuffix}`, params, empty);
-    perimetre = 'commune';
+    perimetre = 'adresse';
   }
   let plans = (data.content ?? []).filter((p: any) => modelesProcedure.includes(p.modeleProcedure));
   if (!token) {
@@ -178,9 +188,9 @@ const pprSchema = (description: string) => z
       .gte(0)
       .describe("Nombre de plans de prévention"),
     perimetre: z
-      .enum(['commune', 'rayon'])
+      .enum(['adresse', 'rayon'])
       .optional()
-      .describe("Périmètre de recherche : commune de l'adresse (API v1) ou rayon de 5 km (API v2)"),
+      .describe("Périmètre de recherche : plans applicables à l'adresse (API v1) ou dans un rayon de 5 km (API v2)"),
     plans: z
       .array(
         z
@@ -212,10 +222,10 @@ const pprText = (libelleSection: string, ppr: Ppr | undefined): string => {
   if (!ppr) {
     return '';
   }
-  const perimetre = ppr.perimetre === 'commune'
-    ? "sur la commune de l'adresse indiquée"
-    : "dans un rayon de 5 kilomètres autour de l'adresse indiquée";
-  let result = `\n\n${ppr.total} ${libelleSection} recensés ${perimetre}.`;
+  const perimetre = ppr.perimetre === 'adresse'
+    ? "applicables à l'adresse indiquée"
+    : "recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée";
+  let result = `\n\n${ppr.total} ${libelleSection} ${perimetre}.`;
   if (ppr.total > 0) {
     result += ' Voici la liste des plans de prévention :' + bullets(ppr.plans
       .map(p => {
@@ -247,8 +257,57 @@ const installationsSeveso = (installations: any[]) => {
     .filter((i: any) => i.seveso !== 'non_seveso');
 };
 
+// Zones de sismicité réglementaires (1 à 5) et couleurs de la couche WMS `risq_zonage_sismique`.
+const ZONES_SISMIQUES = ['Très faible', 'Faible', 'Modérée', 'Moyenne', 'Forte'];
+const COULEURS_ZONES_SISMIQUES = ['#d5d5d5', '#fdd031', '#fd7e00', '#de2a16', '#820404'];
+
+// Zone de sismicité à partir des champs de l'API (« 4 », « 4 - MOYENNE »…).
+const zoneSismique = (...valeurs: unknown[]) => {
+  for (const valeur of valeurs) {
+    const m = str(valeur).match(/[1-5]/);
+    if (m) {
+      const code = Number(m[0]);
+      return { code, libelle: ZONES_SISMIQUES[code - 1] };
+    }
+  }
+  return null;
+};
+
 // Formate une liste d'éléments sous forme de puces pour les sorties textuelles.
 const bullets = (items: string[]) => items.map(i => `\n  - ${i}`).join('');
+
+// Définition d'un risque fondé uniquement sur des plans de prévention (bloc `ppr`).
+const risquePpr = (def: {
+  code: string;
+  libelle: string;
+  // Endpoint GASPAR (sans préfixe de version) et modèles de procédure retenus
+  endpoint: string;
+  modelesProcedure: string[];
+  libelleRisque: string;
+  alea?: Alea;
+  // Libellé utilisé dans la sortie texte (« N <libelleSection> applicables à l'adresse »)
+  libelleSection: string;
+  description: string;
+  layers: any[];
+}) => ({
+  code: def.code,
+  libelle: def.libelle,
+  fetch: async (longitude: number, latitude: number) => {
+    return {
+      ppr: await fetchPpr(longitude, latitude, def.endpoint, def.modelesProcedure, def.libelleRisque, def.alea)
+    };
+  },
+  outputSchema: z
+    .object({
+      ppr: pprSchema(def.description)
+    })
+    .optional()
+    .describe(`Exposition au risque ${def.libelle.toLowerCase()}`),
+  text: (exposition: any) => {
+    return pprText(def.libelleSection, exposition.ppr).trimStart();
+  },
+  layers: def.layers
+});
 
 
 export const RISQUES = [
@@ -1220,5 +1279,196 @@ export const RISQUES = [
       }
     ]
   },
+
+
+  //========== RISQUE - Séisme ==========//
+
+  {
+    code: 'seisme',
+    libelle: 'Séisme',
+    fetch: async (longitude: number, latitude: number) => {
+      // Zonage sismique réglementaire (5 zones, décret du 22 octobre 2010)
+      const zonage = async () => {
+        if (process.env.API_V2_TOKEN) {
+          const params = new URLSearchParams({
+            longitude: `${longitude}`,
+            latitude: `${latitude}`,
+          });
+          const data: any = await callGeorisqueAPI('api/v2/zonage_sismique', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+          const z = data.content?.[0];
+          return zoneSismique(z?.zoneSismicite, z?.typeZone);
+        } else {
+          // Sans rayon, la v1 renvoie aussi les communes voisines : rayon de 1 m
+          // pour ne garder que la commune du point.
+          const params = new URLSearchParams({
+            latlon: `${longitude},${latitude}`,
+            rayon: '1',
+          });
+          const data: any = await callGeorisqueAPI('api/v1/zonage_sismique', params, { data: [] });
+          const z = data.data?.[0];
+          return zoneSismique(z?.code_zone, z?.zone_sismicite);
+        }
+      };
+      const [zone, ppr]: [any, Ppr] = await Promise.all([
+        zonage(),
+        fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-S', 'PPRN-Multi'], 'Séisme', ALEAS.seisme),
+      ]);
+      return {
+        zonage: zone,
+        ppr
+      };
+    },
+    outputSchema: z
+          .object({
+            zonage: z
+              .object({
+                code: z
+                  .number()
+                  .int()
+                  .gte(1)
+                  .lte(5)
+                  .describe("Zone de sismicité réglementaire (1 à 5)"),
+                libelle: z
+                  .string()
+                  .describe("Libellé de la zone de sismicité"),
+              })
+              .nullable()
+              .optional()
+              .describe("Zonage sismique réglementaire de la commune"),
+            ppr: pprSchema("Plans de Prévention des Risques Naturels (PPRN) liés au séisme")
+          })
+          .optional()
+          .describe("Exposition au risque sismique"),
+    text: (exposition: any) => {
+      let result = exposition.zonage
+        ? `L'adresse indiquée est située en zone de sismicité ${exposition.zonage.code} (${exposition.zonage.libelle.toLowerCase()}), sur une échelle réglementaire allant de 1 (très faible) à 5 (forte).`
+        : "Le zonage sismique n'a pas pu être déterminé pour l'adresse indiquée.";
+      result += pprText("plans de prévention des risques sismiques", exposition.ppr);
+      return result;
+    },
+    layers: [
+      {
+        id: 'seisme',
+        nom: 'Zonage sismique',
+        source: (exposition: any) => makeRasterGeorisqueSource('risq_zonage_sismique'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends(
+          ZONES_SISMIQUES.map((libelle, idx) => [
+            makeSquareSvg({ fillOpacity: 0.8, fillColor: COULEURS_ZONES_SISMIQUES[idx], strokeColor: COULEURS_ZONES_SISMIQUES[idx], strokeWidth: 1 })!,
+            `Zone ${idx + 1} : sismicité ${libelle.toLowerCase()}`
+          ])
+        )
+      }
+    ]
+  },
+
+
+  //========== RISQUE - Feux de forêt ==========//
+
+  risquePpr({
+    code: 'feux_foret',
+    libelle: 'Feux de forêt',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-IF', 'PPRN-Multi'],
+    libelleRisque: 'Feu de forêt',
+    alea: ALEAS.feuForet,
+    libelleSection: 'plans de prévention des risques d\'incendie de forêt',
+    description: "Plans de Prévention des Risques Naturels (PPRN) liés aux feux de forêt",
+    layers: [
+      {
+        id: 'feux_foret',
+        nom: 'PPR Feux de forêt',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_FEU'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#f08a02', strokeColor: '#c6780f', strokeWidth: 4 })!, 'Zone à risque d\'incendie entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
+
+
+  //========== RISQUE - Risques littoraux ==========//
+
+  risquePpr({
+    code: 'littoral',
+    libelle: 'Risques littoraux (submersion marine, recul du trait de côte)',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-L', 'PPRN-Multi'],
+    libelleRisque: 'Risques littoraux',
+    alea: ALEAS.littoral,
+    libelleSection: 'plans de prévention des risques littoraux',
+    description: "Plans de Prévention des Risques Naturels (PPRN) littoraux : submersion marine, recul du trait de côte",
+    layers: [
+      {
+        id: 'littoral',
+        nom: 'PPR Littoral',
+        source: (exposition: any) => makeRasterGeorisqueSource('PPRN_COMMUNE_SUBMAR_APPROUV'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.7, fillColor: '#125f8f', strokeColor: '#125f8f', strokeWidth: 4 })!, 'Commune concernée par un PPR submersion marine approuvé']
+        ])
+      }
+    ]
+  }),
+
+
+  //========== RISQUE - Avalanches ==========//
+
+  risquePpr({
+    code: 'avalanche',
+    libelle: 'Avalanches',
+    endpoint: 'gaspar/pprn',
+    modelesProcedure: ['PPRN-Av', 'PPRN-Multi'],
+    libelleRisque: 'Avalanche',
+    alea: ALEAS.avalanche,
+    libelleSection: 'plans de prévention des risques d\'avalanche',
+    description: "Plans de Prévention des Risques Naturels (PPRN) liés aux avalanches",
+    layers: [
+      {
+        id: 'avalanche',
+        nom: 'PPR Avalanche',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_AVALANCHE'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.4, fillColor: '#2f2f2f', strokeColor: '#2c2c2c', strokeWidth: 4 })!, 'Zone à risque d\'avalanche entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
+
+
+  //========== RISQUE - Risques miniers ==========//
+
+  risquePpr({
+    code: 'risques_miniers',
+    libelle: 'Risques miniers',
+    endpoint: 'gaspar/pprm',
+    modelesProcedure: ['PPRM'],
+    libelleRisque: 'Risque minier',
+    libelleSection: 'plans de prévention des risques miniers (PPRM)',
+    description: "Plans de Prévention des Risques Miniers (PPRM)",
+    layers: [
+      {
+        id: 'risques_miniers',
+        nom: 'PPR Minier',
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_MINIER'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends([
+          [ makeSquareSvg({ fillOpacity: 0.35, fillColor: '#7f0000', strokeColor: '#7c1616', strokeWidth: 4 })!, 'Zone à risque minier entraînant une servitude d\'utilité publique (PPR approuvé)']
+        ])
+      }
+    ]
+  }),
 
 ];

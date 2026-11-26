@@ -11,8 +11,8 @@ const features = [
   },
   {
     icon: '⚠️',
-    title: '7 risques majeurs',
-    description: 'Argiles, inondations, mouvements de terrain, cavités, installations nucléaires, ICPE Seveso et catastrophes naturelles.',
+    title: '12 risques majeurs',
+    description: 'Argiles, inondations, mouvements de terrain, cavités, séisme, feux de forêt, littoral, avalanches, risques miniers, installations nucléaires, ICPE Seveso et catastrophes naturelles.',
   },
   {
     icon: '🗺️',
@@ -53,6 +53,11 @@ const risks = [
   { icon: '☢️', label: 'Installations nucléaires' },
   { icon: '🏭', label: 'Installations Seveso (ICPE)' },
   { icon: '🌪️', label: 'Catastrophes naturelles' },
+  { icon: '📉', label: 'Séisme' },
+  { icon: '🔥', label: 'Feux de forêt' },
+  { icon: '🏖️', label: 'Risques littoraux' },
+  { icon: '🏔️', label: 'Avalanches' },
+  { icon: '⛏️', label: 'Risques miniers' },
 ];
 
 function HeroBanner() {
@@ -101,7 +106,7 @@ function RisksSection() {
   return (
     <section className="risks-section">
       <div className="container">
-        <h2>7 risques majeurs couverts</h2>
+        <h2>12 risques majeurs couverts</h2>
         <div className="risk-grid">
           {risks.map((r, i) => (
             <div className="risk-item" key={i}>

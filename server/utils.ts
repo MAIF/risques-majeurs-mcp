@@ -50,8 +50,29 @@ export const str = (value: unknown): string => {
   return value === null || value === undefined ? '' : String(value);
 }
 
+// Requêtes en cours, par URL : plusieurs risques évalués en parallèle interrogent
+// parfois le même endpoint avec les mêmes paramètres (ex. `gaspar/pprn` pour les
+// argiles, les mouvements de terrain, les inondations…). Une seule requête HTTP est
+// alors émise et son résultat est partagé, ce qui ménage les quotas de l'API.
+const pendingRequests = new Map<string, Promise<unknown>>();
+
 export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any, token: string = '') => {
   const url = `${GEORISQUES_BASE_URL}/${path}?${params}`;
+  const key = `${token}\n${url}`;
+  let pending = pendingRequests.get(key);
+  if (!pending) {
+    pending = fetchGeorisqueJSON(path, url, token)
+      .finally(() => pendingRequests.delete(key));
+    pendingRequests.set(key, pending);
+  }
+  const data = await pending;
+  // Copie : chaque appelant peut transformer la réponse sans affecter les autres.
+  return data === undefined ? defaultPayload : structuredClone(data);
+}
+
+// Réponse JSON de l'API Géorisques, ou `undefined` si la réponse n'est pas du JSON
+// (certains endpoints renvoient un corps vide quand il n'y a pas de donnée).
+const fetchGeorisqueJSON = async (path: string, url: string, token: string): Promise<unknown> => {
   const headers: Record<string, string> = { 'Accept': 'application/json' };
   if (token) {
     headers['Authorization'] = 'Bearer ' + token;
@@ -72,12 +93,11 @@ export const callGeorisqueAPI = async (path: string, params: URLSearchParams, de
     }
     throw new Error(message);
   }
-  let data = defaultPayload;
   const contentType = response.headers.get("Content-Type");
   if (contentType && contentType.includes("application/json")) {
-    data = await response.json();
+    return await response.json();
   }
-  return data;
+  return undefined;
 }
 
 export const makeRasterGeorisqueSource = (layerName: string) => {

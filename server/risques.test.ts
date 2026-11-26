@@ -10,6 +10,11 @@ describe('RISQUES', () => {
     'catnat',
     'icpe',
     'installations_nucleaires',
+    'seisme',
+    'feux_foret',
+    'littoral',
+    'avalanche',
+    'risques_miniers',
   ];
 
   it('contains all expected risk codes in order', () => {
@@ -146,11 +151,11 @@ describe('fetch / outputSchema / text (v1)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers() }));
     const r = risque('argiles');
     const exposition = await r.fetch(2.3522, 48.8566);
-    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0, ppr: { total: 0, perimetre: 'commune', plans: [] } });
+    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0, ppr: { total: 0, perimetre: 'adresse', plans: [] } });
     expect(r.outputSchema.safeParse(exposition).success).toBe(true);
     expect(r.text(exposition)).toBe(
       "Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Non exposé (score de 0 sur 3)"
-      + "\n\n0 plans de prévention des risques de retrait-gonflement des argiles recensés sur la commune de l'adresse indiquée."
+      + "\n\n0 plans de prévention des risques de retrait-gonflement des argiles applicables à l'adresse indiquée."
     );
   });
 
@@ -191,7 +196,7 @@ describe('fetch / outputSchema / text (v1)', () => {
     expect(text).toContain('Cavités de type "carrière" :\n  - Cavité sans nom');
   });
 
-  it('inondations : sortie valide et périmètre PPR limité à la commune en v1', async () => {
+  it("inondations : sortie valide et PPR limités à ceux applicables à l'adresse en v1", async () => {
     stubGeorisques({
       '/api/v1/gaspar/tri': {
         data: [{ libelle_tri: 'TRI Métropole Francilienne', liste_libelle_risque: [{ libelle_risque_long: 'Inondation' }], code_insee: '75056', libelle_commune: 'Paris', date_arrete_pcb: '27/11/2012' }],
@@ -209,10 +214,10 @@ describe('fetch / outputSchema / text (v1)', () => {
     expect(r.outputSchema.safeParse(exposition).success).toBe(true);
     expect(exposition.tri.zones[0].date).toBe('2012-11-27');
     expect(exposition.azi.zones[0]).toMatchObject({ code_insee: '', commune: '', date: null });
-    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'commune' });
+    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'adresse' });
     const text = r.text(exposition);
     expect(text).not.toMatch(/,\n/);
-    expect(text).toContain("1 plans de prévention des inondations recensés sur la commune de l'adresse indiquée.");
+    expect(text).toContain("1 plans de prévention des inondations applicables à l'adresse indiquée.");
     expect(text).toContain('PPRN-I - Nîmes (mis à jour le 19/11/2026)');
   });
 
@@ -573,5 +578,152 @@ describe('PPRN-Multi (v1) : filtrage sur les aléas réellement couverts', () =>
       });
     }));
     expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
+  });
+});
+
+describe('risques_miniers.fetch (v1)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('interroge api/v1/gaspar/pprm et ne conserve que les PPRM', async () => {
+    const fetchMock = stubGeorisques({
+      '/api/v1/gaspar/pprm': {
+        totalElements: 2,
+        content: [
+          { idGaspar: '07DDT20120001', libPpr: 'PRIVAS/VEYRAS PPR Minier', modeleProcedure: 'PPRM', dateModification: '12/03/2019' },
+          { idGaspar: 'X', libPpr: 'Autre', modeleProcedure: 'PPRN-I', dateModification: null },
+        ],
+      },
+    });
+    const r = risque('risques_miniers');
+    const exposition = await r.fetch(4.6014, 44.7397);
+
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'adresse' });
+    expect(exposition.ppr.plans[0]).toEqual({ libelle: 'PRIVAS/VEYRAS PPR Minier', risque: 'Risque minier', commune: '', date: '2019-03-12' });
+    expect(r.text(exposition)).toBe(
+      "1 plans de prévention des risques miniers (PPRM) applicables à l'adresse indiquée. Voici la liste des plans de prévention :\n  - PRIVAS/VEYRAS PPR Minier (mis à jour le 12/03/2019)"
+    );
+    const urls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+    expect(urls.every(u => !u.includes('/api/v1/gaspar/pprn'))).toBe(true);
+  });
+});
+
+// Nouveaux risques fondés sur les PPRN : filtrage sur `modeleProcedure` et, pour les
+// PPRN-Multi, sur les aléas réellement couverts (détail v1).
+const testRisquePprn = (code: string, modele: string, codesCouverts: string[], codesV2: string[]) => {
+  describe(`${code}.fetch`, () => {
+    const originalToken = process.env.API_V2_TOKEN;
+
+    afterEach(() => {
+      if (originalToken !== undefined) {
+        process.env.API_V2_TOKEN = originalToken;
+      } else {
+        delete process.env.API_V2_TOKEN;
+      }
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    const aleas = (codes: string[]) => ({
+      communes: [{ aleas: codes.map(c => c.length === 2 ? { codeGaspar: c } : { codeGaspar: c.slice(0, 2), sousAlea: [{ codeGaspar: c }] }) }],
+    });
+
+    it(`v1 : retient ${modele} et les PPRN-Multi couvrant l'aléa, écarte les autres`, async () => {
+      delete process.env.API_V2_TOKEN;
+      stubGeorisques({
+        '/api/v1/gaspar/pprn': {
+          totalElements: 4,
+          content: [
+            { idGaspar: 'A', libPpr: `${modele} - Commune`, modeleProcedure: modele, dateModification: '01/02/2020' },
+            { idGaspar: 'B', libPpr: 'Multi couvrant', modeleProcedure: 'PPRN-Multi', dateModification: null },
+            { idGaspar: 'C', libPpr: 'Multi inondation', modeleProcedure: 'PPRN-Multi', dateModification: null },
+            { idGaspar: 'D', libPpr: 'PPRN-I - Commune', modeleProcedure: 'PPRN-I', dateModification: null },
+          ],
+        },
+        '/api/v1/gaspar/pprn/B': aleas(['11', ...codesCouverts]),
+        '/api/v1/gaspar/pprn/C': aleas(['11', '112']),
+      });
+      const r = risque(code);
+      const exposition = await r.fetch(5, 45);
+      expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+      expect(exposition.ppr.plans.map((p: any) => p.libelle)).toEqual([`${modele} - Commune`, 'Multi couvrant']);
+      expect(r.text(exposition)).toMatch(/(^|\n)2 plans de prévention .* applicables à l'adresse indiquée\./);
+    });
+
+    it(`v2 : filtre via codesAlea=${codesV2.join(',')}`, async () => {
+      process.env.API_V2_TOKEN = 'token';
+      const fetchMock = stubGeorisques({});
+      await risque(code).fetch(5, 45);
+      const call = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprn'));
+      expect(new URL(call!).searchParams.getAll('codesAlea')).toEqual(codesV2);
+    });
+  });
+};
+
+testRisquePprn('feux_foret', 'PPRN-IF', ['16'], ['FEUFORET']);
+testRisquePprn('avalanche', 'PPRN-Av', ['14'], ['AVAL']);
+testRisquePprn('littoral', 'PPRN-L', ['117'], ['SUBMAR', 'RTC']);
+testRisquePprn('seisme', 'PPRN-S', ['13'], ['SEISM']);
+
+describe('seisme : zonage sismique', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('v1 : lit la zone de la commune du point (rayon de 1 m)', async () => {
+    delete process.env.API_V2_TOKEN;
+    const fetchMock = stubGeorisques({
+      '/api/v1/zonage_sismique': {
+        data: [{ code_insee: '13044', libelle_commune: 'GRANS', code_zone: '4', zone_sismicite: '4 - MOYENNE' }],
+      },
+    });
+    const r = risque('seisme');
+    const exposition = await r.fetch(5.0646, 43.6133);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.zonage).toEqual({ code: 4, libelle: 'Moyenne' });
+    expect(r.text(exposition)).toMatch(/^L'adresse indiquée est située en zone de sismicité 4 \(moyenne\), sur une échelle réglementaire allant de 1 \(très faible\) à 5 \(forte\)\.\n\n0 plans de prévention des risques sismiques/);
+    const call = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v1/zonage_sismique'));
+    expect(new URL(call!).searchParams.get('rayon')).toBe('1');
+  });
+
+  it('v2 : lit zoneSismicite', async () => {
+    process.env.API_V2_TOKEN = 'token';
+    stubGeorisques({
+      '/api/v2/zonage_sismique': { totalElements: 1, content: [{ typeZone: 'Zone de sismicité', zoneSismicite: '2 - Faible' }] },
+    });
+    const exposition = await risque('seisme').fetch(2.35, 48.85);
+    expect(exposition.zonage).toEqual({ code: 2, libelle: 'Faible' });
+  });
+
+  it('zonage absent : null et texte explicite', async () => {
+    delete process.env.API_V2_TOKEN;
+    stubGeorisques({});
+    const r = risque('seisme');
+    const exposition = await r.fetch(0, 0);
+    expect(exposition.zonage).toBeNull();
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(r.text(exposition)).toMatch(/^Le zonage sismique n'a pas pu être déterminé/);
   });
 });

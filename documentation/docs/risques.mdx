@@ -1,19 +1,19 @@
 ---
 sidebar_position: 5
 title: Les risques couverts
-description: Détail des 7 risques majeurs évalués par le serveur
+description: Détail des 12 risques majeurs évalués par le serveur
 ---
 
 # Les risques couverts
 
-Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/).
+Le serveur évalue **12 risques majeurs** en s'appuyant sur les API publiques de [Géorisques](https://www.georisques.gouv.fr/).
 
 ## Retrait-gonflement des argiles
 
 - **Code** : `argiles`
 - **API v1** : `/api/v1/rga`, `/api/v1/gaspar/pprn`
 - **API v2** : `/api/v2/rga`, `/api/v2/gaspar/pprn`
-- **Évaluation** : ponctuelle (pas de rayon) + PPR de la commune (v1) ou dans un rayon de 5 km (v2)
+- **Évaluation** : ponctuelle (pas de rayon) + PPR applicables à l'adresse (v1) ou dans un rayon de 5 km (v2)
 
 Évalue le niveau d'exposition au phénomène de retrait-gonflement des sols argileux, qui peut provoquer des fissures sur les bâtiments. Le score va de 0 (non exposé) à 3 (exposition forte).
 
@@ -24,7 +24,7 @@ Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de 
 | 2 | Exposition moyenne |
 | 3 | Exposition forte |
 
-Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-RGA` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-RGA` ou `PPRN-Multi`), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Mouvements de terrain
 
@@ -35,7 +35,7 @@ Inclut également les Plans de Prévention des Risques Naturels associés (filtr
 
 Recense les mouvements de terrain (glissements, éboulements, coulées, effondrements, érosion des berges) dans un rayon de 5 km. Chaque mouvement est décrit par son type, son lieu et sa date.
 
-Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-Mvt` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-Mvt` ou `PPRN-Multi`), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Cavités souterraines
 
@@ -63,7 +63,7 @@ Le risque inondation agrège 4 sources de données complémentaires :
 | **PPRN** | Plans de Prévention des Risques Naturels (filtre sur `modeleProcedure` `PPRN-I` ou `PPRN-Multi`) |
 
 :::note
-En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
+En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : ils renvoient les plans de prévention dont le **périmètre contient l'adresse** (plans applicables à l'adresse, et non tous ceux de la commune). En v2, les plans sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`adresse` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
 
 L'endpoint v1 n'honorant pas le filtre `codesAlea`, les plans multirisques (`PPRN-Multi`) sont vérifiés un par un via leur détail (`/api/v1/gaspar/pprn/{idGaspar}`) : un PPRN-Multi n'est retenu que s'il couvre réellement l'aléa du risque (code GASPAR `11` pour l'inondation, sous-aléas `121` à `126` pour les mouvements de terrain, `127` « tassements différentiels » pour le retrait-gonflement des argiles). En v2, ce filtrage est assuré par Géorisques via `codesAlea` (`INOND`, `MVT`, `SEC`).
 :::
@@ -92,7 +92,7 @@ Ce risque n'a pas de couche cartographique. Il n'est disponible que via l'outil 
 
 Recense les installations classées pour la protection de l'environnement (ICPE) ayant le statut Seveso (seuil haut ou seuil bas) dans un rayon de 5 km. Les installations non Seveso sont filtrées.
 
-Inclut également les Plans de Prévention des Risques Technologiques (PPRT), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Technologiques (PPRT), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Installations nucléaires
 
@@ -101,3 +101,60 @@ Inclut également les Plans de Prévention des Risques Technologiques (PPRT), re
 - **API v2** : `/api/v2/installations_nucleaires`
 
 Recense les installations nucléaires (centrales, centres de recherche, etc.) à proximité des coordonnées indiquées. Le rayon de recherche est défini par l'API Géorisques.
+
+## Séisme
+
+- **Code** : `seisme`
+- **API v1** : `/api/v1/zonage_sismique`, `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/zonage_sismique`, `/api/v2/gaspar/pprn` (`codesAlea=SEISM`)
+- **Couche carte** : zonage sismique (WMS `risq_zonage_sismique`)
+
+Indique la **zone de sismicité réglementaire** de la commune de l'adresse, de 1 (très faible) à 5 (forte), et les Plans de Prévention des Risques sismiques (`PPRN-S`, ou `PPRN-Multi` couvrant l'aléa séisme, code GASPAR `13`).
+
+| Zone | Sismicité |
+|---|---|
+| 1 | Très faible |
+| 2 | Faible |
+| 3 | Modérée |
+| 4 | Moyenne |
+| 5 | Forte |
+
+## Feux de forêt
+
+- **Code** : `feux_foret`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=FEUFORET`)
+- **Couche carte** : périmètres des servitudes feu de forêt (WMS `SUP_FEU`)
+
+Recense les Plans de Prévention des Risques d'incendie de forêt (`PPRN-IF`, ou `PPRN-Multi` couvrant l'aléa feu de forêt, code GASPAR `16`).
+
+## Risques littoraux
+
+- **Code** : `littoral`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=SUBMAR` et `RTC`)
+- **Couche carte** : communes concernées par un PPR submersion marine approuvé (WMS `PPRN_COMMUNE_SUBMAR_APPROUV`)
+
+Recense les Plans de Prévention des Risques littoraux (`PPRN-L`, ou `PPRN-Multi` couvrant la submersion marine, l'avancée dunaire ou le recul du trait de côte, codes GASPAR `117`, `125` et `126`).
+
+## Avalanches
+
+- **Code** : `avalanche`
+- **API v1** : `/api/v1/gaspar/pprn`
+- **API v2** : `/api/v2/gaspar/pprn` (`codesAlea=AVAL`)
+- **Couche carte** : périmètres des servitudes avalanche (WMS `SUP_AVALANCHE`)
+
+Recense les Plans de Prévention des Risques d'avalanche (`PPRN-Av`, ou `PPRN-Multi` couvrant l'aléa avalanche, code GASPAR `14`).
+
+## Risques miniers
+
+- **Code** : `risques_miniers`
+- **API v1** : `/api/v1/gaspar/pprm`
+- **API v2** : `/api/v2/gaspar/pprm`
+- **Couche carte** : périmètres des servitudes risques miniers (WMS `SUP_MINIER`)
+
+Recense les Plans de Prévention des Risques Miniers (`PPRM`).
+
+:::note
+Comme pour les autres blocs `ppr`, ces plans sont ceux applicables à l'adresse en v1 (périmètre contenant le point) et ceux situés dans un rayon de 5 km en v2. Les plans sont peu nombreux à l'échelle nationale (environ 235 PPRN-IF, 127 PPRN-L, 69 PPRM, 12 PPRN-S et 8 PPRN-Av) : la plupart des adresses n'en ont aucun.
+:::
