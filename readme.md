@@ -21,12 +21,12 @@ Le serveur expose 4 outils MCP :
 
 | Code | Risque | Source API Géorisques (v1) | Source API Géorisques (v2) |
 |---|---|---|---|
-| `argiles` | Retrait-gonflement des argiles | `/api/v1/rga` | `/api/v2/rga` |
-| `mouvement_terrain` | Mouvements de terrain | `/api/v1/mvt` | `/api/v2/mvt` |
+| `argiles` | Retrait-gonflement des argiles (+ PPRN) | `/api/v1/rga`, `gaspar/pprn` | `/api/v2/rga`, `gaspar/pprn` |
+| `mouvement_terrain` | Mouvements de terrain (+ PPRN) | `/api/v1/mvt`, `gaspar/pprn` | `/api/v2/mvt`, `gaspar/pprn` |
 | `cavites` | Cavités souterraines | `/api/v1/cavites` | `/api/v2/cavites` |
 | `inondations` | Inondations (TRI, AZI, PAPI, PPRN) | `/api/v1/gaspar/tri`, `azi`, `papi`, `pprn` | `/api/v2/gaspar/tri`, `azi`, `papi`, `pprn` |
 | `catnat` | Catastrophes naturelles (CatNat) | `/api/v1/gaspar/catnat` | `/api/v2/gaspar/catnat` |
-| `icpe` | Installations classées Seveso (ICPE) | `/api/v1/installations_classees` | `/api/v2/installations_classees` |
+| `icpe` | Installations classées Seveso (ICPE, + PPRT) | `/api/v1/installations_classees`, `gaspar/pprt` | `/api/v2/installations_classees`, `gaspar/pprt` |
 | `installations_nucleaires` | Installations nucléaires | `/api/v1/installations_nucleaires` | `/api/v2/installations_nucleaires` |
 
 Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKEN` est configurée (jeton d'authentification Géorisques, gratuit). Sinon, les endpoints v1 publics sont utilisés.
@@ -34,7 +34,7 @@ Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKE
 > [!WARNING]
 > Depuis fin 2026, la spécification OpenAPI de Géorisques documente une réponse `410 Gone` pour les endpoints v1 (hors PPR) : leur retrait est annoncé, sans date à ce jour. Configurer un jeton v2 est recommandé. Si un risque ne peut pas être évalué, les outils renvoient les autres risques et signalent l'erreur au lieu d'échouer entièrement.
 
-En v1, l'endpoint `gaspar/pprn` ne prend pas de rayon : les plans de prévention sont recherchés sur la commune de l'adresse (rayon de 5 km en v2).
+Les risques `argiles`, `mouvement_terrain`, `inondations` et `icpe` incluent les plans de prévention associés (PPRN ou PPRT). En v1, les endpoints `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : les plans sont recherchés sur la commune de l'adresse (rayon de 5 km en v2).
 
 ### Carte interactive
 
