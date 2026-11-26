@@ -13,7 +13,7 @@ Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de 
 - **Code** : `argiles`
 - **API v1** : `/api/v1/rga`, `/api/v1/gaspar/pprn`
 - **API v2** : `/api/v2/rga`, `/api/v2/gaspar/pprn`
-- **Évaluation** : ponctuelle (pas de rayon) + PPR de la commune (v1) ou dans un rayon de 5 km (v2)
+- **Évaluation** : ponctuelle (pas de rayon) + PPR applicables à l'adresse (v1) ou dans un rayon de 5 km (v2)
 
 Évalue le niveau d'exposition au phénomène de retrait-gonflement des sols argileux, qui peut provoquer des fissures sur les bâtiments. Le score va de 0 (non exposé) à 3 (exposition forte).
 
@@ -24,7 +24,7 @@ Le serveur évalue **7 risques majeurs** en s'appuyant sur les API publiques de 
 | 2 | Exposition moyenne |
 | 3 | Exposition forte |
 
-Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-RGA` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-RGA` ou `PPRN-Multi`), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Mouvements de terrain
 
@@ -35,7 +35,7 @@ Inclut également les Plans de Prévention des Risques Naturels associés (filtr
 
 Recense les mouvements de terrain (glissements, éboulements, coulées, effondrements, érosion des berges) dans un rayon de 5 km. Chaque mouvement est décrit par son type, son lieu et sa date.
 
-Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-Mvt` ou `PPRN-Multi`), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Naturels associés (filtre sur `modeleProcedure` `PPRN-Mvt` ou `PPRN-Multi`), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Cavités souterraines
 
@@ -63,7 +63,7 @@ Le risque inondation agrège 4 sources de données complémentaires :
 | **PPRN** | Plans de Prévention des Risques Naturels (filtre sur `modeleProcedure` `PPRN-I` ou `PPRN-Multi`) |
 
 :::note
-En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : les plans de prévention sont recherchés sur la **commune** de l'adresse. En v2, ils sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`commune` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
+En v1, les endpoints `/api/v1/gaspar/pprn` et `/api/v1/gaspar/pprt` ne prennent pas de rayon : ils renvoient les plans de prévention dont le **périmètre contient l'adresse** (plans applicables à l'adresse, et non tous ceux de la commune). En v2, les plans sont recherchés dans un rayon de 5 km. Le champ `ppr.perimetre` de la réponse structurée (`adresse` ou `rayon`) indique le périmètre utilisé. Il en va de même pour les blocs `ppr` des risques `argiles`, `mouvement_terrain` et `icpe`.
 
 L'endpoint v1 n'honorant pas le filtre `codesAlea`, les plans multirisques (`PPRN-Multi`) sont vérifiés un par un via leur détail (`/api/v1/gaspar/pprn/{idGaspar}`) : un PPRN-Multi n'est retenu que s'il couvre réellement l'aléa du risque (code GASPAR `11` pour l'inondation, sous-aléas `121` à `126` pour les mouvements de terrain, `127` « tassements différentiels » pour le retrait-gonflement des argiles). En v2, ce filtrage est assuré par Géorisques via `codesAlea` (`INOND`, `MVT`, `SEC`).
 :::
@@ -92,7 +92,7 @@ Ce risque n'a pas de couche cartographique. Il n'est disponible que via l'outil 
 
 Recense les installations classées pour la protection de l'environnement (ICPE) ayant le statut Seveso (seuil haut ou seuil bas) dans un rayon de 5 km. Les installations non Seveso sont filtrées.
 
-Inclut également les Plans de Prévention des Risques Technologiques (PPRT), recensés sur la commune de l'adresse en v1 et dans un rayon de 5 km en v2.
+Inclut également les Plans de Prévention des Risques Technologiques (PPRT), applicables à l'adresse en v1 (périmètre contenant le point) et dans un rayon de 5 km en v2.
 
 ## Installations nucléaires
 

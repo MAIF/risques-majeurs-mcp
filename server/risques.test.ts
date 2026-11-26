@@ -146,11 +146,11 @@ describe('fetch / outputSchema / text (v1)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers() }));
     const r = risque('argiles');
     const exposition = await r.fetch(2.3522, 48.8566);
-    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0, ppr: { total: 0, perimetre: 'commune', plans: [] } });
+    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0, ppr: { total: 0, perimetre: 'adresse', plans: [] } });
     expect(r.outputSchema.safeParse(exposition).success).toBe(true);
     expect(r.text(exposition)).toBe(
       "Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Non exposé (score de 0 sur 3)"
-      + "\n\n0 plans de prévention des risques de retrait-gonflement des argiles recensés sur la commune de l'adresse indiquée."
+      + "\n\n0 plans de prévention des risques de retrait-gonflement des argiles applicables à l'adresse indiquée."
     );
   });
 
@@ -191,7 +191,7 @@ describe('fetch / outputSchema / text (v1)', () => {
     expect(text).toContain('Cavités de type "carrière" :\n  - Cavité sans nom');
   });
 
-  it('inondations : sortie valide et périmètre PPR limité à la commune en v1', async () => {
+  it("inondations : sortie valide et PPR limités à ceux applicables à l'adresse en v1", async () => {
     stubGeorisques({
       '/api/v1/gaspar/tri': {
         data: [{ libelle_tri: 'TRI Métropole Francilienne', liste_libelle_risque: [{ libelle_risque_long: 'Inondation' }], code_insee: '75056', libelle_commune: 'Paris', date_arrete_pcb: '27/11/2012' }],
@@ -209,10 +209,10 @@ describe('fetch / outputSchema / text (v1)', () => {
     expect(r.outputSchema.safeParse(exposition).success).toBe(true);
     expect(exposition.tri.zones[0].date).toBe('2012-11-27');
     expect(exposition.azi.zones[0]).toMatchObject({ code_insee: '', commune: '', date: null });
-    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'commune' });
+    expect(exposition.ppr).toMatchObject({ total: 1, perimetre: 'adresse' });
     const text = r.text(exposition);
     expect(text).not.toMatch(/,\n/);
-    expect(text).toContain("1 plans de prévention des inondations recensés sur la commune de l'adresse indiquée.");
+    expect(text).toContain("1 plans de prévention des inondations applicables à l'adresse indiquée.");
     expect(text).toContain('PPRN-I - Nîmes (mis à jour le 19/11/2026)');
   });
 

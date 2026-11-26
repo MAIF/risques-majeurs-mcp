@@ -34,7 +34,7 @@ Les endpoints v2 sont utilisés lorsque la variable d'environnement `API_V2_TOKE
 > [!WARNING]
 > Depuis fin 2026, la spécification OpenAPI de Géorisques documente une réponse `410 Gone` pour les endpoints v1 (hors PPR) : leur retrait est annoncé, sans date à ce jour. Configurer un jeton v2 est recommandé. Si un risque ne peut pas être évalué, les outils renvoient les autres risques et signalent l'erreur au lieu d'échouer entièrement.
 
-Les risques `argiles`, `mouvement_terrain`, `inondations` et `icpe` incluent les plans de prévention associés (PPRN ou PPRT). En v1, les endpoints `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : les plans sont recherchés sur la commune de l'adresse (rayon de 5 km en v2).
+Les risques `argiles`, `mouvement_terrain`, `inondations` et `icpe` incluent les plans de prévention associés (PPRN ou PPRT). En v1, les endpoints `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : seuls les plans dont le périmètre contient l'adresse sont renvoyés (rayon de 5 km en v2).
 
 ### Carte interactive
 

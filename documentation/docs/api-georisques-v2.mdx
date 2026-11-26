@@ -62,7 +62,7 @@ L'authentification permet à Géorisques d'attribuer des **quotas par utilisateu
 | Pagination | Variable selon l'endpoint | `totalElements` + `content[]` partout |
 | Filtres | Lat/lon + rayon principalement | Lat/lon, rayon, WKT, parcelles, codes INSEE, département, région, thématique |
 | Format des dates | `DD/MM/YYYY` | ISO 8601 |
-| Endpoint PPRN inondation | `/api/v1/gaspar/pprn` (commune de l'adresse, sans rayon) + filtre côté serveur sur `modeleProcedure` | `/api/v2/gaspar/pprn?codesAlea=INOND` (rayon de 5 km) |
+| Endpoint PPRN inondation | `/api/v1/gaspar/pprn` (plans applicables à l'adresse, sans rayon) + filtre côté serveur sur `modeleProcedure` | `/api/v2/gaspar/pprn?codesAlea=INOND` (rayon de 5 km) |
 | Catastrophes naturelles | `/api/v1/gaspar/catnat` | `/api/v2/gaspar/catnat` |
 | Quotas | Partagés, anonymes (5 appels/s) | Par utilisateur authentifié (20 appels/s) |
 | Pérennité | Retrait annoncé (`410 Gone` documenté) | Maintenue |

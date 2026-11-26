@@ -56,11 +56,12 @@ const procedureV1 = (p: any, libelle: string, date: unknown) => {
 // autour d'un point, en filtrant côté serveur sur `modeleProcedure` (le paramètre
 // `codesAlea` n'est pas honoré par les endpoints v1, et garde une sémantique
 // stricte en v2 — défense en profondeur).
-// En v1, `gaspar/pprn` et `gaspar/pprt` ne prennent pas de rayon : la recherche
-// porte sur la commune du point. En v2, elle porte sur un rayon de 5 km.
+// En v1, `gaspar/pprn`, `gaspar/pprt` et `gaspar/pprm` ne prennent pas de rayon :
+// ils renvoient les plans dont le périmètre contient le point (plans applicables à
+// l'adresse). En v2, la recherche porte sur un rayon de 5 km.
 type Ppr = {
   total: number;
-  perimetre: 'commune' | 'rayon';
+  perimetre: 'adresse' | 'rayon';
   plans: Array<{ libelle: string; risque: string; commune: string; date: string | null }>;
 };
 
@@ -152,7 +153,7 @@ const fetchPpr = async (
       page_size: '1000',
     });
     data = await callGeorisqueAPI(`api/v1/${endpointSuffix}`, params, empty);
-    perimetre = 'commune';
+    perimetre = 'adresse';
   }
   let plans = (data.content ?? []).filter((p: any) => modelesProcedure.includes(p.modeleProcedure));
   if (!token) {
@@ -178,9 +179,9 @@ const pprSchema = (description: string) => z
       .gte(0)
       .describe("Nombre de plans de prévention"),
     perimetre: z
-      .enum(['commune', 'rayon'])
+      .enum(['adresse', 'rayon'])
       .optional()
-      .describe("Périmètre de recherche : commune de l'adresse (API v1) ou rayon de 5 km (API v2)"),
+      .describe("Périmètre de recherche : plans applicables à l'adresse (API v1) ou dans un rayon de 5 km (API v2)"),
     plans: z
       .array(
         z
@@ -212,10 +213,10 @@ const pprText = (libelleSection: string, ppr: Ppr | undefined): string => {
   if (!ppr) {
     return '';
   }
-  const perimetre = ppr.perimetre === 'commune'
-    ? "sur la commune de l'adresse indiquée"
-    : "dans un rayon de 5 kilomètres autour de l'adresse indiquée";
-  let result = `\n\n${ppr.total} ${libelleSection} recensés ${perimetre}.`;
+  const perimetre = ppr.perimetre === 'adresse'
+    ? "applicables à l'adresse indiquée"
+    : "recensés dans un rayon de 5 kilomètres autour de l'adresse indiquée";
+  let result = `\n\n${ppr.total} ${libelleSection} ${perimetre}.`;
   if (ppr.total > 0) {
     result += ' Voici la liste des plans de prévention :' + bullets(ppr.plans
       .map(p => {
