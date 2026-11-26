@@ -380,12 +380,10 @@ export function createServer() {
   // Domaines appelés par la carte (tuiles de fond CARTO, tuiles WMS et légendes Géorisques).
   const csp = {
     connectDomains: [
-      "https://demotiles.maplibre.org",
       "https://a.basemaps.cartocdn.com",
       "https://b.basemaps.cartocdn.com",
       "https://c.basemaps.cartocdn.com",
       "https://d.basemaps.cartocdn.com",
-      "https://mapsref.brgm.fr",
       GEORISQUES_BASE_URL
     ],
     // Images de légende (<img>) servies par le WMS Géorisques
