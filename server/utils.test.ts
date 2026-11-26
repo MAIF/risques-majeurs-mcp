@@ -118,3 +118,63 @@ describe('toIsoDate / toFrenchDate', () => {
     expect(toFrenchDate(null)).toBeNull();
   });
 });
+
+describe('callGeorisqueAPI : déduplication des requêtes concurrentes', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const jsonResponse = (body: any) => ({
+    ok: true,
+    headers: new Headers({ 'Content-Type': 'application/json' }),
+    json: vi.fn().mockResolvedValue(body),
+  });
+
+  it("n'émet qu'une requête pour des appels identiques simultanés, chaque appelant recevant sa copie", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ content: [{ id: 1 }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const params = () => new URLSearchParams({ longitude: '4.36', latitude: '43.83' });
+
+    const [a, b] = await Promise.all([
+      callGeorisqueAPI('api/v1/gaspar/pprn', params(), {}),
+      callGeorisqueAPI('api/v1/gaspar/pprn', params(), {}),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(a).toEqual({ content: [{ id: 1 }] });
+    a.content.push({ id: 2 });
+    expect(b).toEqual({ content: [{ id: 1 }] });
+  });
+
+  it('ne garde rien en cache une fois la requête terminée', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ n: 1 }))
+      .mockResolvedValueOnce(jsonResponse({ n: 2 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await callGeorisqueAPI('api/v1/rga', new URLSearchParams(), {})).toEqual({ n: 1 });
+    expect(await callGeorisqueAPI('api/v1/rga', new URLSearchParams(), {})).toEqual({ n: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('distingue les appels avec et sans jeton', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({})));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await Promise.all([
+      callGeorisqueAPI('api/v2/rga', new URLSearchParams(), {}, 'token'),
+      callGeorisqueAPI('api/v2/rga', new URLSearchParams(), {}),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("applique la valeur par défaut propre à chaque appelant si la réponse n'est pas du JSON", async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers() }));
+    const [a, b] = await Promise.all([
+      callGeorisqueAPI('api/v1/rga', new URLSearchParams(), { a: 1 }),
+      callGeorisqueAPI('api/v1/rga', new URLSearchParams(), { b: 2 }),
+    ]);
+    expect(a).toEqual({ a: 1 });
+    expect(b).toEqual({ b: 2 });
+  });
+});
