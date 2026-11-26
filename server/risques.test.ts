@@ -146,9 +146,12 @@ describe('fetch / outputSchema / text (v1)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers() }));
     const r = risque('argiles');
     const exposition = await r.fetch(2.3522, 48.8566);
-    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0 });
+    expect(exposition).toEqual({ libelle: 'Non exposé', score: 0, ppr: { total: 0, perimetre: 'commune', plans: [] } });
     expect(r.outputSchema.safeParse(exposition).success).toBe(true);
-    expect(r.text(exposition)).toBe("Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Non exposé (score de 0 sur 3)");
+    expect(r.text(exposition)).toBe(
+      "Le niveau d'exposition au risque de retrait-gonflement des argiles à l'adresse indiquée est : Non exposé (score de 0 sur 3)"
+      + "\n\n0 plans de prévention des risques de retrait-gonflement des argiles recensés sur la commune de l'adresse indiquée."
+    );
   });
 
   it('mouvement_terrain : accepte les champs null renvoyés par la v1', async () => {
@@ -335,5 +338,240 @@ describe('catnat.fetch (v2)', () => {
       { type: 'Inondations et/ou Coulées de Boue', code_insee: '30189', commune: 'Nîmes', date: '1988-10-03' },
       { type: 'Arrêté C', code_insee: '30189', commune: 'Nîmes', date: null },
     ]);
+  });
+});
+
+// Mock fetch helper for the PPR filtering tests below: routes a given
+// PPR endpoint path to a payload, returns empty for everything else.
+const stubFetchForPpr = (pprPath: string, payload: any) => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    const path = new URL(url).pathname;
+    const body = path === pprPath ? payload : { totalElements: 0, content: [], data: [] };
+    return Promise.resolve({
+      ok: true,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: vi.fn().mockResolvedValue(body),
+    });
+  }));
+};
+
+const v1OnlyHooks = () => {
+  const originalToken = process.env.API_V2_TOKEN;
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+  });
+};
+
+describe("mouvement_terrain.fetch (v1)", () => {
+  const risque = (RISQUES as any[]).find(r => r.code === 'mouvement_terrain');
+  v1OnlyHooks();
+
+  it('ne conserve que les PPRN dont le modeleProcedure est PPRN-Mvt ou PPRN-Multi', async () => {
+    stubFetchForPpr('/api/v1/gaspar/pprn', {
+      totalElements: 4,
+      content: [
+        { libPpr: 'PPRN-Mvt Pougny', modeleProcedure: 'PPRN-Mvt', dateModification: '24/03/2025' },
+        { libPpr: 'PPRN-I Nîmes', modeleProcedure: 'PPRN-I', dateModification: '24/03/2025' },
+        { libPpr: 'PPRN-Multi Tenay', modeleProcedure: 'PPRN-Multi', dateModification: '26/03/2025' },
+        { libPpr: 'PPRN-RGA Privas', modeleProcedure: 'PPRN-RGA', dateModification: '18/02/2025' },
+      ],
+    });
+
+    const result = await risque.fetch(4.3601, 43.8367);
+
+    expect(result.ppr.total).toBe(2);
+    expect(result.ppr.plans.map((p: any) => p.libelle)).toEqual([
+      'PPRN-Mvt Pougny',
+      'PPRN-Multi Tenay',
+    ]);
+    expect(result.ppr.plans.every((p: any) => p.risque === 'Mouvement de terrain')).toBe(true);
+  });
+});
+
+describe("argiles.fetch (v1)", () => {
+  const risque = (RISQUES as any[]).find(r => r.code === 'argiles');
+  v1OnlyHooks();
+
+  it('ne conserve que les PPRN dont le modeleProcedure est PPRN-RGA ou PPRN-Multi', async () => {
+    stubFetchForPpr('/api/v1/gaspar/pprn', {
+      totalElements: 4,
+      content: [
+        { libPpr: 'PPRN-RGA Privas', modeleProcedure: 'PPRN-RGA', dateModification: '18/02/2025' },
+        { libPpr: 'PPRN-I Nîmes', modeleProcedure: 'PPRN-I', dateModification: '24/03/2025' },
+        { libPpr: 'PPRN-Multi Tenay', modeleProcedure: 'PPRN-Multi', dateModification: '26/03/2025' },
+        { libPpr: 'PPRN-Mvt Pougny', modeleProcedure: 'PPRN-Mvt', dateModification: '24/03/2025' },
+      ],
+    });
+
+    const result = await risque.fetch(4.3601, 43.8367);
+
+    expect(result.ppr.total).toBe(2);
+    expect(result.ppr.plans.map((p: any) => p.libelle)).toEqual([
+      'PPRN-RGA Privas',
+      'PPRN-Multi Tenay',
+    ]);
+    expect(result.ppr.plans.every((p: any) => p.risque === 'Retrait-gonflement des argiles')).toBe(true);
+  });
+});
+
+describe("icpe.fetch (v1)", () => {
+  const risque = (RISQUES as any[]).find(r => r.code === 'icpe');
+  v1OnlyHooks();
+
+  it('appelle api/v1/gaspar/pprt et ne conserve que les modeleProcedure PPRT', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      const path = new URL(url).pathname;
+      let body: any = { totalElements: 0, content: [], data: [] };
+      if (path === '/api/v1/gaspar/pprt') {
+        body = {
+          totalElements: 2,
+          content: [
+            { libPpr: 'Vallée de la chimie', modeleProcedure: 'PPRT', dateModification: '10/05/2017' },
+            { libPpr: 'Autre type', modeleProcedure: 'PPRN-I', dateModification: '01/01/2020' },
+          ],
+        };
+      }
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+        json: vi.fn().mockResolvedValue(body),
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await risque.fetch(4.8589, 45.6731);
+
+    expect(result.ppr.total).toBe(1);
+    expect(result.ppr.plans[0].libelle).toBe('Vallée de la chimie');
+    expect(result.ppr.plans[0].risque).toBe('Technologique');
+
+    // Vérifie qu'on n'appelle pas l'endpoint PPRN pour ce risque.
+    const urls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+    expect(urls.some(u => u.includes('/api/v1/gaspar/pprn'))).toBe(false);
+  });
+});
+
+describe('PPR (v2)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    process.env.API_V2_TOKEN = 'token';
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['argiles', 'SEC'],
+    ['mouvement_terrain', 'MVT'],
+    ['inondations', 'INOND'],
+  ])("%s : interroge api/v2/gaspar/pprn avec codesAlea=%s et un rayon de 5 km", async (code, codeAlea) => {
+    const fetchMock = stubGeorisques({});
+    const exposition = await risque(code).fetch(4.3601, 43.8367);
+    const pprnCall = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprn'));
+    expect(pprnCall).toBeDefined();
+    const params = new URL(pprnCall!).searchParams;
+    expect(params.get('codesAlea')).toBe(codeAlea);
+    expect(params.get('rayon')).toBe('5000');
+    expect(exposition.ppr.perimetre).toBe('rayon');
+  });
+
+  it('icpe : interroge api/v2/gaspar/pprt sans codesAlea', async () => {
+    const fetchMock = stubGeorisques({});
+    await risque('icpe').fetch(4.8589, 45.6731);
+    const pprtCall = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v2/gaspar/pprt'));
+    expect(pprtCall).toBeDefined();
+    expect(new URL(pprtCall!).searchParams.has('codesAlea')).toBe(false);
+  });
+});
+
+describe('PPRN-Multi (v1) : filtrage sur les aléas réellement couverts', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.API_V2_TOKEN;
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  // Liste v1 de la commune : un PPRN-Multi inondation + mouvement de terrain (cas de Tenay)
+  const liste = {
+    totalElements: 1,
+    content: [{ idGaspar: '01DDT19970011', libPpr: 'PPRi PPRmt_Tenay', modeleProcedure: 'PPRN-Multi', dateModification: '26/03/2025' }],
+  };
+  const detail = {
+    idGaspar: '01DDT19970011',
+    communes: [{
+      nom: 'TENAY',
+      codeInsee: '01416',
+      aleas: [
+        { codeGaspar: '11', libelle: 'Inondation', sousAlea: [{ codeGaspar: '112' }, { codeGaspar: '113' }] },
+        { codeGaspar: '12', libelle: 'Mouvement de terrain', sousAlea: [{ codeGaspar: '123' }, { codeGaspar: '124' }] },
+      ],
+    }],
+  };
+
+  it.each([
+    ['argiles', 0],
+    ['mouvement_terrain', 1],
+    ['inondations', 1],
+  ])("%s : %i plan(s) retenu(s)", async (code, attendu) => {
+    const fetchMock = stubGeorisques({
+      '/api/v1/gaspar/pprn': liste,
+      '/api/v1/gaspar/pprn/01DDT19970011': detail,
+    });
+    const exposition = await risque(code).fetch(5.5097, 45.9186);
+    expect(exposition.ppr.total).toBe(attendu);
+    const urls = fetchMock.mock.calls.map((c: any[]) => c[0] as string);
+    expect(urls.some(u => u.includes('/api/v1/gaspar/pprn/01DDT19970011'))).toBe(true);
+  });
+
+  it('argiles : retient un PPRN-Multi couvrant les tassements différentiels (127)', async () => {
+    stubGeorisques({
+      '/api/v1/gaspar/pprn': liste,
+      '/api/v1/gaspar/pprn/01DDT19970011': {
+        communes: [{ aleas: [{ codeGaspar: '12', sousAlea: [{ codeGaspar: '127' }] }] }],
+      },
+    });
+    expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
+    expect((await risque('mouvement_terrain').fetch(5.5097, 45.9186)).ppr.total).toBe(0);
+  });
+
+  it('conserve le PPRN-Multi si son détail est indisponible', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      const path = new URL(url).pathname;
+      if (path === '/api/v1/gaspar/pprn/01DDT19970011') {
+        return Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' });
+      }
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+        json: vi.fn().mockResolvedValue(path === '/api/v1/gaspar/pprn' ? liste : { data: [] }),
+      });
+    }));
+    expect((await risque('argiles').fetch(5.5097, 45.9186)).ppr.total).toBe(1);
   });
 });

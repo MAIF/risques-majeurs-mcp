@@ -20,12 +20,12 @@ L'outil `exposition_risques` évalue le niveau d'exposition aux risques majeurs 
 
 | Code | Risque |
 |---|---|
-| `argiles` | Retrait-gonflement des argiles |
-| `mouvement_terrain` | Mouvements de terrain |
+| `argiles` | Retrait-gonflement des argiles (+ PPRN) |
+| `mouvement_terrain` | Mouvements de terrain (+ PPRN) |
 | `cavites` | Cavités souterraines |
 | `inondations` | Inondations (TRI, AZI, PAPI, PPRN) |
 | `catnat` | Catastrophes naturelles |
-| `icpe` | Installations classées Seveso |
+| `icpe` | Installations classées Seveso (+ PPRT) |
 | `installations_nucleaires` | Installations nucléaires |
 
 ## Exemple d'appel
@@ -63,5 +63,5 @@ Cet outil est idéal quand l'agent IA a besoin d'un résumé textuel des risques
 
 La plupart des risques sont évalués dans un **rayon de 5 km** autour des coordonnées fournies, à l’exception de :
 - **Argiles** : évaluation ponctuelle (pas de rayon)
-- **Plans de prévention des inondations (PPRN)** : commune de l'adresse en v1, rayon de 5 km en v2
+- **Plans de prévention (PPRN, PPRT)** : commune de l'adresse en v1, rayon de 5 km en v2
 - **Installations nucléaires** : rayon défini par l'API Géorisques en v1, 5 km en v2
