@@ -1,5 +1,10 @@
+export const GEORISQUES_BASE_URL = 'https://www.georisques.gouv.fr';
+
+// Délai maximal accordé à un appel aux API externes (Géorisques, IGN).
+export const API_TIMEOUT_MS = 15_000;
+
 export const sanitize = (str: string): string => {
-  return str
+  return String(str ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -7,12 +12,65 @@ export const sanitize = (str: string): string => {
     .replace(/'/g, '&#x27;');
 }
 
+/**
+ * Normalise une date renvoyée par l'API Géorisques au format ISO `YYYY-MM-DD`.
+ * Les endpoints v1 renvoient des dates `DD/MM/YYYY`, les endpoints v2 des dates
+ * ISO (`YYYY-MM-DD` ou date-heure ISO 8601). Toute valeur illisible donne `null`
+ * plutôt qu'une date invalide qui ferait échouer la validation du schéma de sortie.
+ */
+export const toIsoDate = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const v = value.trim();
+  let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  let year: number, month: number, day: number;
+  if (m) {
+    [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  } else if ((m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/))) {
+    [year, month, day] = [Number(m[3]), Number(m[2]), Number(m[1])];
+  } else {
+    return null;
+  }
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** Formate une date ISO `YYYY-MM-DD` en `DD/MM/YYYY` pour les sorties textuelles. */
+export const toFrenchDate = (isoDate: string | null | undefined): string | null => {
+  const m = isoDate?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : null;
+}
+
+/** Chaîne, ou chaîne vide si la valeur est absente (évite les `null` dans les schémas de sortie). */
+export const str = (value: unknown): string => {
+  return value === null || value === undefined ? '' : String(value);
+}
+
 export const callGeorisqueAPI = async (path: string, params: URLSearchParams, defaultPayload: any, token: string = '') => {
-  const url = `https://georisques.gouv.fr/${path}?${params}`;
-  const headers: any = token ? { 'Authorization': 'Bearer ' + token } : {};
-  const response = await fetch(url, { headers });
+  const url = `${GEORISQUES_BASE_URL}/${path}?${params}`;
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  let response: Response;
+  try {
+    response = await fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+  } catch (e: any) {
+    const reason = e?.name === 'TimeoutError' ? `délai de ${API_TIMEOUT_MS / 1000} s dépassé` : (e?.message ?? String(e));
+    throw new Error(`Erreur lors de l'appel à l'API Géorisques '${path}' : ${reason}`);
+  }
   if (!response.ok) {
-    throw new Error(`Erreur lors de l'appel à l'API Géorisques '${path}' : ${response.status} ${response.statusText}`);
+    let message = `Erreur lors de l'appel à l'API Géorisques '${path}' : ${response.status} ${response.statusText}`;
+    if (response.status === 410) {
+      message += ` (endpoint retiré par Géorisques : configurez API_V2_TOKEN pour utiliser l'API v2)`;
+    } else if (response.status === 401 && token) {
+      message += ` (jeton API_V2_TOKEN invalide ou expiré)`;
+    }
+    throw new Error(message);
   }
   let data = defaultPayload;
   const contentType = response.headers.get("Content-Type");
@@ -25,29 +83,12 @@ export const callGeorisqueAPI = async (path: string, params: URLSearchParams, de
 export const makeRasterGeorisqueSource = (layerName: string) => {
   return {
     type: 'raster',
-    tiles: [`https://www.georisques.gouv.fr/services?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${layerName}&STYLES=&SRS=EPSG:3857&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`],
+    tiles: [`${GEORISQUES_BASE_URL}/services?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=${layerName}&STYLES=&CRS=EPSG:3857&TILED=false&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`],
     tileSize: 256,
     maxzoom: 16,
     attribution: 'Ministère de la Transition Écologique'
   };
 }
-
-export const makeGeorisqueLegend = (layerName: string) => {
-  const src = `https://georisques.gouv.fr/services?language=fre&version=1.3.0&service=WMS&request=GetLegendGraphic&sld_version=1.1.0&layer=${layerName}&format=image/png&STYLE=default`;
-  const img = document.createElement('img');
-  img.src = src;
-  return img;
-}
-
-/*export const makeRasterGeoPFSource = (layerName: string) => {
-  return {
-    type: 'raster',
-    tiles: [`https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&FORMAT=image/png&LAYER=${layerName}&STYLE=normal&TILEMATRIXSET=PM_6_16&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`],
-    tileSize: 256,
-    maxzoom: 16,
-    attribution: 'Ministère de la Transition Écologique'
-  };
-}*/
 
 const htmlToElement = (html: string) => {
     const placeholder = document.createElement('template');

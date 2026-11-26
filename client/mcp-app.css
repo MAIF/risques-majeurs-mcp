@@ -13,6 +13,18 @@ body {
     height: 100%;
 }
 
+.map-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 1em;
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+    color: #444;
+    text-align: center;
+}
+
 .maplibregl-ctrl-toggle-displaymode {
     padding: 0 5px !important;
     width: auto !important;

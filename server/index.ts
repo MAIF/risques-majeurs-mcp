@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { createMcpHandler } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { createMcpExpressApp } from "@modelcontextprotocol/express";
+import { toNodeHandler } from "@modelcontextprotocol/node";
 import type { Request, Response } from "express";
 import { createServer } from "./server.js";
 import cors from "cors";
@@ -12,30 +13,43 @@ const parseIntEnv = (value: string | undefined, fallback: number) => {
   return Number.isNaN(parsed) ? fallback : parsed;
 };
 
+const parseListEnv = (value: string | undefined) => {
+  const list = (value || "").split(",").map(v => v.trim()).filter(v => v !== "");
+  return list.length > 0 ? list : undefined;
+};
+
 const args = process.argv.slice(2);
 const STDIO_MODE = args.includes('--stdio')
   || args.includes('--transport=stdio')
   || (args.includes('--transport') && args[args.indexOf('--transport') + 1] === 'stdio')
   || process.env.MCP_TRANSPORT === 'stdio';
 
-async function runStdio() {
+const logToken = (log: (...a: any[]) => void) => {
+  if (process.env.API_V2_TOKEN) {
+    log(`Jeton configuré : le serveur MCP interrogera les endpoints v2 de l'API Géorisques lorsqu'ils sont disponibles`);
+  }
+};
+
+function runStdio() {
   // In stdio mode, stdout is reserved for the JSON-RPC protocol.
   // Redirect every `console.log` (including those inside the MCP server)
   // to stderr so logs do not corrupt the protocol stream.
   console.log = (...a: any[]) => console.error(...a);
 
-  const server = createServer();
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('Serveur MCP risques-majeurs (stdio) prêt');
-  if (process.env.API_V2_TOKEN) {
-    console.error(`Jeton configuré : le serveur MCP interrogera les endpoints v2 de l'API Géorisques lorsqu'ils sont disponibles`);
-  }
-  process.on('SIGINT', async () => {
-    await transport.close();
-    await server.close();
-    process.exit(0);
+  // serveStdio handles both protocol eras: 2026-07-28 (no initialize handshake)
+  // and 2025-era clients that open the connection with `initialize`.
+  const handle = serveStdio(() => createServer(), {
+    onerror: (error) => console.error("Erreur MCP (stdio) :", error.message),
   });
+  console.error('Serveur MCP risques-majeurs (stdio) prêt');
+  logToken(console.error);
+
+  const shutdown = async () => {
+    await handle.close();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 function runHttp() {
@@ -44,7 +58,14 @@ function runHttp() {
   const RATE_LIMIT_WINDOW_MS = parseIntEnv(process.env.RATE_LIMIT_WINDOW_MS, 60 * 1000);
   const RATE_LIMIT_MAX = parseIntEnv(process.env.RATE_LIMIT_MAX, 100);
   const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
-  const app = createMcpExpressApp({host: HOST});
+
+  // Host / Origin validation (DNS rebinding protection). Automatic when listening
+  // on localhost; opt-in through ALLOWED_HOSTS / ALLOWED_ORIGINS otherwise.
+  const app = createMcpExpressApp({
+    host: HOST,
+    allowedHosts: parseListEnv(process.env.ALLOWED_HOSTS),
+    allowedOrigins: parseListEnv(process.env.ALLOWED_ORIGINS),
+  });
 
   // Express 'trust proxy' setting — required when running behind a reverse
   // proxy (nginx, ngrok, Cloudflare…) so express-rate-limit can identify the
@@ -73,21 +94,23 @@ function runHttp() {
     legacyHeaders: false,
   }));
 
-  // --- POST /mcp : requêtes JSON-RPC ---
-  app.post("/mcp", async (req: Request, res: Response) => {
+  // Streamable HTTP, stateless. createMcpHandler serves:
+  // - 2026-07-28 clients (no session, no initialize handshake, protocol version
+  //   and client info carried in each request's `_meta`);
+  // - 2025-era clients through a stateless fallback (a fresh server per request,
+  //   no Mcp-Session-Id). GET and DELETE are answered with 405.
+  // All exposed tools are read-only and idempotent, so no state is kept between
+  // requests.
+  const mcpHandler = createMcpHandler(() => createServer(), {
+    onerror: (error) => console.error("Erreur MCP :", error.message),
+  });
+  const nodeHandler = toNodeHandler(mcpHandler);
+
+  app.all("/mcp", async (req: Request, res: Response) => {
     try {
-      const server = createServer();
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined
-      });
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
-      res.on('close', () => {
-          transport.close();
-          server.close();
-      });
+      await nodeHandler(req, res, req.body);
     } catch (error: unknown) {
-      console.error("Erreur POST /mcp :", error instanceof Error ? error.message : error);
+      console.error(`Erreur ${req.method} /mcp :`, error instanceof Error ? error.message : error);
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: "2.0",
@@ -96,66 +119,28 @@ function runHttp() {
         });
       }
     }
-  });
-
-  // --- GET /mcp
-  app.get("/mcp", async (req: Request, res: Response) => {
-    try {
-      const server = createServer();
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined
-      });
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
-      res.on('close', () => {
-          transport.close();
-          server.close();
-      });
-    } catch (error) {
-      console.error("Erreur GET /mcp :", error);
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: "2.0",
-          error: { code: -32603, message: "Erreur interne" },
-          id: null,
-        });
-      }
-    }
-  });
-
-  // --- DELETE /mcp
-  app.delete("/mcp", async (req: Request, res: Response) => {
-    console.log('Received DELETE MCP request');
-    res.writeHead(405).end(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        error: {
-          code: -32000,
-          message: 'Method not allowed.'
-        },
-        id: null
-      })
-    );
   });
 
   // Lancement du serveur HTTP
-  app.listen(PORT, () => {
+  const httpServer = app.listen(PORT, HOST, () => {
     console.log(`Serveur MCP risques-majeurs (Streamable HTTP) sur http://localhost:${PORT}/mcp`);
     // API Géorisques v2 si le jeton est configuré
-    if (process.env.API_V2_TOKEN) {
-      console.log(`Jeton configuré : le serveur MCP interrogera les endpoints v2 de l'API Géorisques lorsqu'ils sont disponibles`);
-    }
+    logToken(console.log);
   });
 
-  // Arrêt propre : fermer tous les transports
-  process.on("SIGINT", async () => {
+  // Arrêt propre
+  const shutdown = async () => {
     console.log("\nArrêt en cours...");
-    process.exit(0);
-  });
+    await mcpHandler.close();
+    httpServer.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5000).unref();
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 if (STDIO_MODE) {
-  await runStdio();
+  runStdio();
 } else {
   runHttp();
 }

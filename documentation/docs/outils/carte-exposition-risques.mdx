@@ -34,11 +34,20 @@ Tous les risques ne sont pas disponibles sur la carte. L'outil `liste_risques` i
 
 En plus de la carte, l'outil retourne les données structurées d'exposition pour chaque risque, exploitables par l'agent IA.
 
+Si un risque ne peut pas être évalué (API Géorisques indisponible, endpoint retiré…), les autres risques sont tout de même renvoyés et affichés. Le risque en échec est absent de `exposition.risques` et listé dans le champ `erreurs` :
+
+```json
+{
+  "exposition": { "risques": { "argiles": { "libelle": "Exposition moyenne", "score": 2 } }, "longitude": 4.3601, "latitude": 43.8367 },
+  "erreurs": [{ "code": "cavites", "message": "Erreur lors de l'appel à l'API Géorisques 'api/v1/cavites' : fetch failed" }]
+}
+```
+
 ## La carte interactive
 
 La carte est une application web basée sur [MapLibre GL](https://maplibre.org/) qui offre :
 
-- **Fond de carte** — Tuiles CARTO en niveaux de gris
+- **Fond de carte** — [Plan IGN v2](https://geoservices.ign.fr/) (Géoplateforme IGN) en niveaux de gris
 - **Marqueur de position** — Indique les coordonnées demandees
 - **Couches de risques** — Superposition des données WMS de Géorisques ou GeoJSON
 - **Contrôle des couches** — Boutons radio pour choisir le risque affiché (un seul à la fois)
@@ -46,6 +55,10 @@ La carte est une application web basée sur [MapLibre GL](https://maplibre.org/)
 - **Mode plein ecran** — Bascule entre vue inline et plein ecran (si supporte par le client)
 
 ![Carte d'exposition aux risques avec contrôle des couches](/img/screenshots/map_tool.png)
+
+:::info Domaines contactés par la carte
+L'application est servie dans une iframe isolée par le client MCP. Elle déclare dans sa politique de sécurité (CSP) les seuls domaines qu'elle contacte : `https://data.geopf.fr` (fond de carte) et `https://www.georisques.gouv.fr` (couches WMS et images de légende). Le worker de MapLibre est embarqué dans la page et chargé via une URL `blob:`.
+:::
 
 En cliquant sur le bouton **Légende** en bas à gauche, un panneau détaille les symboles et codes couleurs de chaque couche affichée :
 
@@ -59,6 +72,6 @@ En cliquant sur le bouton **Légende** en bas à gauche, un panneau détaille le
 | Mouvements de terrain | WMS raster | Géorisques (`MVT_LOCALISE`) |
 | Cavités | WMS raster | Géorisques (`CAVITE_LOCALISEE`) |
 | Inondations — TRI | WMS raster | Géorisques (`LIMITETRI_FXX`) |
-| Inondations — PPR | WMS raster | Géorisques (`PPRN_INOND`) |
+| Inondations — PPR | WMS raster | Géorisques (`SUP_INOND`) |
 | ICPE Seveso | GeoJSON (points) | API Géorisques |
 | Installations nucléaires | GeoJSON (points) | API Géorisques |
