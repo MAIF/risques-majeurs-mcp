@@ -283,3 +283,57 @@ describe('couches WMS', () => {
     expect(tiles.some((t: string) => t.includes('LAYERS=SUP_INOND'))).toBe(true);
   });
 });
+
+describe('catnat.fetch (v2)', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  beforeEach(() => {
+    process.env.API_V2_TOKEN = 'token';
+  });
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("utilise api/v2/gaspar/catnat et aplatit communes → procédures → périls", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      json: vi.fn().mockResolvedValue({
+        totalElements: 1,
+        content: [{
+          nom: 'Nîmes',
+          codeInsee: '30189',
+          procedures: [
+            { idGaspar: 'A', libelle: 'Arrêté A', perils: [{ libelle: 'Inondations et/ou Coulées de Boue', dateDebut: '1988-10-03T00:00:00Z' }] },
+            { idGaspar: 'B', libelle: 'Arrêté B', perils: [
+              { libelle: 'Sécheresse', dateDebut: '2022-07-01T00:00:00Z' },
+              { libelle: 'Sécheresse', dateDebut: '2022-04-01T00:00:00Z' },
+            ] },
+            { idGaspar: 'C', libelle: 'Arrêté C', perils: [] },
+          ],
+        }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const r = risque('catnat');
+    const exposition = await r.fetch(4.3601, 43.8367);
+
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain('/api/v2/gaspar/catnat?');
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer token');
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.catnat).toEqual([
+      { type: 'Sécheresse', code_insee: '30189', commune: 'Nîmes', date: '2022-04-01' },
+      { type: 'Inondations et/ou Coulées de Boue', code_insee: '30189', commune: 'Nîmes', date: '1988-10-03' },
+      { type: 'Arrêté C', code_insee: '30189', commune: 'Nîmes', date: null },
+    ]);
+  });
+});

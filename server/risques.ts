@@ -700,7 +700,35 @@ export const RISQUES = [
     code: 'catnat',
     libelle: 'Catastrophes naturelles (CatNat)',
     fetch: async (longitude: number, latitude: number) => {
-      // API Géorisques v2 indisponible : on utilise toujours l'endpoint v1
+      // API Géorisques v2 si le jeton est configuré
+      if (process.env.API_V2_TOKEN) {
+        const params = new URLSearchParams({
+          longitude: `${longitude}`,
+          latitude: `${latitude}`,
+          rayon: RAYON,
+          pageSize: '1000',
+        });
+        const data: any = await callGeorisqueAPI('api/v2/gaspar/catnat', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+        // v2 : une entrée par commune, chacune listant ses procédures (arrêtés CatNat),
+        // elles-mêmes composées d'un ou plusieurs périls.
+        const catnat = (data.content ?? [])
+          .flatMap((commune: any) => (commune.procedures ?? []).map((procedure: any) => {
+            const perils: any[] = procedure.perils ?? [];
+            const libelles = [...new Set(perils.map((p: any) => str(p.libelle)).filter((l: string) => l !== ''))];
+            const dates = perils.map((p: any) => toIsoDate(p.dateDebut)).filter((d): d is string => d !== null).sort();
+            return {
+              type: libelles.join(', ') || str(procedure.libelle),
+              code_insee: str(commune.codeInsee),
+              commune: str(commune.nom),
+              date: dates[0] ?? null
+            };
+          }))
+          .sort((a: any, b: any) => (b.date ?? '').localeCompare(a.date ?? ''));
+        return {
+          total: catnat.length,
+          catnat
+        };
+      }
       const params = new URLSearchParams({
         latlon: `${longitude},${latitude}`,
         rayon: RAYON,
