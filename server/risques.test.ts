@@ -272,3 +272,14 @@ describe('fetch / outputSchema / text (v1)', () => {
     expect(exposition.installations.map((i: any) => i.rayon_ppi)).toEqual([10000, null]);
   });
 });
+
+describe('couches WMS', () => {
+  it("n'utilise plus la couche PPRN_INOND retirée du service WMS Géorisques", () => {
+    const layers = (RISQUES as any[]).flatMap(r => r.layers);
+    const tiles = layers
+      .map((l: any) => { try { return l.source({ installations: [] }); } catch { return {}; } })
+      .flatMap((s: any) => s.tiles ?? []);
+    expect(tiles.some((t: string) => t.includes('LAYERS=PPRN_INOND'))).toBe(false);
+    expect(tiles.some((t: string) => t.includes('LAYERS=SUP_INOND'))).toBe(true);
+  });
+});

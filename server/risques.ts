@@ -677,19 +677,17 @@ export const RISQUES = [
         ])
       },
       {
+        // La couche PPRN_INOND (zonage réglementaire des PPRi) a été retirée du service
+        // WMS Géorisques. SUP_INOND affiche les périmètres des servitudes d'utilité
+        // publique inondation (PM1), qui découlent des PPRi approuvés.
         id: 'pprn',
         nom: 'PPR Inondation',
-        source: (exposition: any) => makeRasterGeorisqueSource('PPRN_INOND'),
+        source: (exposition: any) => makeRasterGeorisqueSource('SUP_INOND'),
         layer: {
           type: 'raster'
         },
         legend: (exposition: any) : Node => makeLegends([
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#89d9e7', strokeColor: '#89d9e7', strokeWidth: 1 })!, 'Prescriptions hors zone d\'aléa'],
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#0000ff', strokeColor: '#0000ff', strokeWidth: 1 })!, 'Prescriptions'],
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#ff6060', strokeColor: '#ff6060', strokeWidth: 1 })!, 'Interdiction'],
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#e00000', strokeColor: '#e00000', strokeWidth: 1 })!, 'Interdiction stricte'],
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#c993ff', strokeColor: '#c993ff', strokeWidth: 1 })!, 'Délaissement possible'],
-          [ makeSquareSvg({ fillOpacity: 1, fillColor: '#9a359b', strokeColor: '#9a359b', strokeWidth: 1 })!, 'Expropriation possible']
+          [ makeSquareSvg({ fillOpacity: 0.5, fillColor: '#028df7', strokeColor: '#015aed', strokeWidth: 4 })!, 'Zone à risque d\'inondation entraînant une servitude d\'utilité publique (PPR approuvé)']
         ])
       }
     ]
