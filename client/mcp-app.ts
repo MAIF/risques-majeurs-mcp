@@ -13,29 +13,33 @@ import { FullscreenControl, LayersControl, LegendsControl } from './controls.ts'
 
 setWorkerUrl(URL.createObjectURL(new Blob([maplibreWorkerSource], { type: "text/javascript" })));
 
-// Fond de carte CARTO en niveaux de gris, déclaré directement dans le style
-// (aucun style distant à télécharger).
+// Fond de carte : Plan IGN v2 (Géoplateforme IGN, licence ouverte, sans clé d'API),
+// désaturé pour que les couches de risques portent toute la couleur. CARTO a fermé
+// ses tuiles raster sans clé (filigrane « API KEY REQUIRED »). Les tuiles sont appelées
+// directement (pas de proxy) car en mode stdio il n'y a pas de serveur HTTP.
+// Déclaré directement dans le style (aucun style distant à télécharger).
 const BASEMAP_STYLE: StyleSpecification = {
     version: 8,
     sources: {
-        grayscale: {
+        basemap: {
             type: 'raster',
             tiles: [
-                'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
             ],
             tileSize: 256,
-            maxzoom: 20,
-            attribution: '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://carto.com/attributions">CARTO</a>'
+            maxzoom: 19,
+            attribution: '<a href="https://www.ign.fr/">IGN</a> – <a href="https://geoservices.ign.fr/">Géoplateforme</a>'
         }
     },
     layers: [
         {
-            id: 'grayscale-layer',
+            id: 'basemap-layer',
             type: 'raster',
-            source: 'grayscale'
+            source: 'basemap',
+            paint: {
+                'raster-saturation': -1,
+                'raster-brightness-min': 0.1
+            }
         }
     ]
 };

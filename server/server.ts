@@ -377,13 +377,10 @@ export function createServer() {
     }
   );
 
-  // Domaines appelés par la carte (tuiles de fond CARTO, tuiles WMS et légendes Géorisques).
+  // Domaines appelés par la carte (fond de carte IGN, tuiles WMS et légendes Géorisques).
   const csp = {
     connectDomains: [
-      "https://a.basemaps.cartocdn.com",
-      "https://b.basemaps.cartocdn.com",
-      "https://c.basemaps.cartocdn.com",
-      "https://d.basemaps.cartocdn.com",
+      "https://data.geopf.fr",
       GEORISQUES_BASE_URL
     ],
     // Images de légende (<img>) servies par le WMS Géorisques
