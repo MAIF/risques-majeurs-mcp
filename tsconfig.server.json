@@ -8,8 +8,15 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ]
   },
-  "include": ["server/**/*"],
-  "exclude": ["server/**/*.test.ts"]
+  "include": [
+    "server/**/*"
+  ],
+  "exclude": [
+    "server/**/*.test.ts"
+  ]
 }

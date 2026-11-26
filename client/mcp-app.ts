@@ -1,10 +1,16 @@
 import { RISQUES } from '../server/risques';
 import { App } from "@modelcontextprotocol/ext-apps";
-import { Map, Marker, NavigationControl } from "maplibre-gl";
+import { Map, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
+// MapLibre v6 charge son worker depuis une URL. L'application étant livrée en un seul
+// fichier HTML (servi dans une iframe sandboxée par l'hôte MCP), le code du worker est
+// embarqué tel quel puis exposé via une URL blob:, comme le faisait MapLibre v5.
+import maplibreWorkerSource from "maplibre-gl/dist/maplibre-gl-worker.mjs?raw";
 import { fr } from 'maplibre-ui-translations';
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./mcp-app.css";
 import { FullscreenControl, LayersControl, LegendsControl } from './controls.ts';
+
+setWorkerUrl(URL.createObjectURL(new Blob([maplibreWorkerSource], { type: "text/javascript" })));
 
 const app = new App(
     { name: "app-carte-exposition-risques-ui", version: "1.0.0" },
