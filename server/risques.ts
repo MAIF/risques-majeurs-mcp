@@ -87,6 +87,8 @@ const ALEAS = {
   // Risques littoraux : 117 (submersion marine), 125 (avancée dunaire),
   // 126 (recul du trait de côte et de falaises)
   littoral: { codesV2: ['SUBMAR', 'RTC'], couvert: codes => ['117', '125', '126'].some(c => codes.has(c)) },
+  // 13 : Séisme
+  seisme: { codesV2: ['SEISM'], couvert: codes => codes.has('13') },
   // 14 : Avalanche
   avalanche: { codesV2: ['AVAL'], couvert: codes => codes.has('14') },
   // 16 : Feu de forêt
@@ -253,6 +255,22 @@ const installationsSeveso = (installations: any[]) => {
       latitude: i.latitude
     }))
     .filter((i: any) => i.seveso !== 'non_seveso');
+};
+
+// Zones de sismicité réglementaires (1 à 5) et couleurs de la couche WMS `risq_zonage_sismique`.
+const ZONES_SISMIQUES = ['Très faible', 'Faible', 'Modérée', 'Moyenne', 'Forte'];
+const COULEURS_ZONES_SISMIQUES = ['#d5d5d5', '#fdd031', '#fd7e00', '#de2a16', '#820404'];
+
+// Zone de sismicité à partir des champs de l'API (« 4 », « 4 - MOYENNE »…).
+const zoneSismique = (...valeurs: unknown[]) => {
+  for (const valeur of valeurs) {
+    const m = str(valeur).match(/[1-5]/);
+    if (m) {
+      const code = Number(m[0]);
+      return { code, libelle: ZONES_SISMIQUES[code - 1] };
+    }
+  }
+  return null;
 };
 
 // Formate une liste d'éléments sous forme de puces pour les sorties textuelles.
@@ -1258,6 +1276,90 @@ export const RISQUES = [
           [ makeCircleSvg({ fillOpacity: 1, fillColor: '#2e404f', strokeColor: '#ffffff', strokeWidth: 5 })!, 'Autre installation'],
           [ makeCircleSvg({ fillOpacity: 0.05, fillColor: '#c62222', strokeColor: '#c62222', strokeWidth: 5 })!, 'Rayon du PPI']
         ])
+      }
+    ]
+  },
+
+
+  //========== RISQUE - Séisme ==========//
+
+  {
+    code: 'seisme',
+    libelle: 'Séisme',
+    fetch: async (longitude: number, latitude: number) => {
+      // Zonage sismique réglementaire (5 zones, décret du 22 octobre 2010)
+      const zonage = async () => {
+        if (process.env.API_V2_TOKEN) {
+          const params = new URLSearchParams({
+            longitude: `${longitude}`,
+            latitude: `${latitude}`,
+          });
+          const data: any = await callGeorisqueAPI('api/v2/zonage_sismique', params, { totalElements: 0, content: [] }, process.env.API_V2_TOKEN);
+          const z = data.content?.[0];
+          return zoneSismique(z?.zoneSismicite, z?.typeZone);
+        } else {
+          // Sans rayon, la v1 renvoie aussi les communes voisines : rayon de 1 m
+          // pour ne garder que la commune du point.
+          const params = new URLSearchParams({
+            latlon: `${longitude},${latitude}`,
+            rayon: '1',
+          });
+          const data: any = await callGeorisqueAPI('api/v1/zonage_sismique', params, { data: [] });
+          const z = data.data?.[0];
+          return zoneSismique(z?.code_zone, z?.zone_sismicite);
+        }
+      };
+      const [zone, ppr]: [any, Ppr] = await Promise.all([
+        zonage(),
+        fetchPpr(longitude, latitude, 'gaspar/pprn', ['PPRN-S', 'PPRN-Multi'], 'Séisme', ALEAS.seisme),
+      ]);
+      return {
+        zonage: zone,
+        ppr
+      };
+    },
+    outputSchema: z
+          .object({
+            zonage: z
+              .object({
+                code: z
+                  .number()
+                  .int()
+                  .gte(1)
+                  .lte(5)
+                  .describe("Zone de sismicité réglementaire (1 à 5)"),
+                libelle: z
+                  .string()
+                  .describe("Libellé de la zone de sismicité"),
+              })
+              .nullable()
+              .optional()
+              .describe("Zonage sismique réglementaire de la commune"),
+            ppr: pprSchema("Plans de Prévention des Risques Naturels (PPRN) liés au séisme")
+          })
+          .optional()
+          .describe("Exposition au risque sismique"),
+    text: (exposition: any) => {
+      let result = exposition.zonage
+        ? `L'adresse indiquée est située en zone de sismicité ${exposition.zonage.code} (${exposition.zonage.libelle.toLowerCase()}), sur une échelle réglementaire allant de 1 (très faible) à 5 (forte).`
+        : "Le zonage sismique n'a pas pu être déterminé pour l'adresse indiquée.";
+      result += pprText("plans de prévention des risques sismiques", exposition.ppr);
+      return result;
+    },
+    layers: [
+      {
+        id: 'seisme',
+        nom: 'Zonage sismique',
+        source: (exposition: any) => makeRasterGeorisqueSource('risq_zonage_sismique'),
+        layer: {
+          type: 'raster'
+        },
+        legend: (exposition: any) : Node => makeLegends(
+          ZONES_SISMIQUES.map((libelle, idx) => [
+            makeSquareSvg({ fillOpacity: 0.8, fillColor: COULEURS_ZONES_SISMIQUES[idx], strokeColor: COULEURS_ZONES_SISMIQUES[idx], strokeWidth: 1 })!,
+            `Zone ${idx + 1} : sismicité ${libelle.toLowerCase()}`
+          ])
+        )
       }
     ]
   },

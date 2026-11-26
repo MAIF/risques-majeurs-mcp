@@ -10,6 +10,7 @@ describe('RISQUES', () => {
     'catnat',
     'icpe',
     'installations_nucleaires',
+    'seisme',
     'feux_foret',
     'littoral',
     'avalanche',
@@ -660,7 +661,7 @@ const testRisquePprn = (code: string, modele: string, codesCouverts: string[], c
       const exposition = await r.fetch(5, 45);
       expect(r.outputSchema.safeParse(exposition).success).toBe(true);
       expect(exposition.ppr.plans.map((p: any) => p.libelle)).toEqual([`${modele} - Commune`, 'Multi couvrant']);
-      expect(r.text(exposition)).toMatch(/^2 plans de prévention .* applicables à l'adresse indiquée\./);
+      expect(r.text(exposition)).toMatch(/(^|\n)2 plans de prévention .* applicables à l'adresse indiquée\./);
     });
 
     it(`v2 : filtre via codesAlea=${codesV2.join(',')}`, async () => {
@@ -676,3 +677,53 @@ const testRisquePprn = (code: string, modele: string, codesCouverts: string[], c
 testRisquePprn('feux_foret', 'PPRN-IF', ['16'], ['FEUFORET']);
 testRisquePprn('avalanche', 'PPRN-Av', ['14'], ['AVAL']);
 testRisquePprn('littoral', 'PPRN-L', ['117'], ['SUBMAR', 'RTC']);
+testRisquePprn('seisme', 'PPRN-S', ['13'], ['SEISM']);
+
+describe('seisme : zonage sismique', () => {
+  const originalToken = process.env.API_V2_TOKEN;
+
+  afterEach(() => {
+    if (originalToken !== undefined) {
+      process.env.API_V2_TOKEN = originalToken;
+    } else {
+      delete process.env.API_V2_TOKEN;
+    }
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('v1 : lit la zone de la commune du point (rayon de 1 m)', async () => {
+    delete process.env.API_V2_TOKEN;
+    const fetchMock = stubGeorisques({
+      '/api/v1/zonage_sismique': {
+        data: [{ code_insee: '13044', libelle_commune: 'GRANS', code_zone: '4', zone_sismicite: '4 - MOYENNE' }],
+      },
+    });
+    const r = risque('seisme');
+    const exposition = await r.fetch(5.0646, 43.6133);
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(exposition.zonage).toEqual({ code: 4, libelle: 'Moyenne' });
+    expect(r.text(exposition)).toMatch(/^L'adresse indiquée est située en zone de sismicité 4 \(moyenne\), sur une échelle réglementaire allant de 1 \(très faible\) à 5 \(forte\)\.\n\n0 plans de prévention des risques sismiques/);
+    const call = fetchMock.mock.calls.map((c: any[]) => c[0] as string).find(u => u.includes('/api/v1/zonage_sismique'));
+    expect(new URL(call!).searchParams.get('rayon')).toBe('1');
+  });
+
+  it('v2 : lit zoneSismicite', async () => {
+    process.env.API_V2_TOKEN = 'token';
+    stubGeorisques({
+      '/api/v2/zonage_sismique': { totalElements: 1, content: [{ typeZone: 'Zone de sismicité', zoneSismicite: '2 - Faible' }] },
+    });
+    const exposition = await risque('seisme').fetch(2.35, 48.85);
+    expect(exposition.zonage).toEqual({ code: 2, libelle: 'Faible' });
+  });
+
+  it('zonage absent : null et texte explicite', async () => {
+    delete process.env.API_V2_TOKEN;
+    stubGeorisques({});
+    const r = risque('seisme');
+    const exposition = await r.fetch(0, 0);
+    expect(exposition.zonage).toBeNull();
+    expect(r.outputSchema.safeParse(exposition).success).toBe(true);
+    expect(r.text(exposition)).toMatch(/^Le zonage sismique n'a pas pu être déterminé/);
+  });
+});
