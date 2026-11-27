@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import { Client, StreamableHTTPClientTransport, type ClientOptions } from '@modelcontextprotocol/client';
 import { createMcpHandler, InMemoryTransport } from '@modelcontextprotocol/server';
 import { createServer } from './server.js';
 
@@ -10,18 +10,27 @@ const EXPECTED_TOOLS = [
   'liste_risques',
 ];
 
-// Client HTTP branché directement sur le handler MCP (sans socket).
-const connectHttpClient = async (mode?: 'auto') => {
+// Client HTTP branché directement sur le handler MCP (sans socket). `methods`
+// recense les méthodes JSON-RPC envoyées par le client.
+const connectHttpClient = async (mode?: 'auto', options: ClientOptions = {}) => {
   const handler = createMcpHandler(() => createServer());
+  const methods: string[] = [];
   const transport = new StreamableHTTPClientTransport(new URL('http://test.local/mcp'), {
-    fetch: (url, init) => handler.fetch(new Request(url, init)),
+    fetch: async (url, init) => {
+      const request = new Request(url, init);
+      const body = await request.clone().text();
+      if (body) {
+        methods.push(JSON.parse(body).method);
+      }
+      return handler.fetch(request);
+    },
   });
   const client = new Client(
     { name: 'test-client', version: '1.0.0' },
-    mode ? { versionNegotiation: { mode } } : undefined
+    { ...options, ...(mode && { versionNegotiation: { mode } }) }
   );
   await client.connect(transport);
-  return { client, handler };
+  return { client, handler, methods };
 };
 
 afterEach(() => {
@@ -84,6 +93,25 @@ describe('Streamable HTTP', () => {
     expect(client.getProtocolEra()).toBe('legacy');
     const result: any = await client.callTool({ name: 'liste_risques', arguments: {} });
     expect(result.structuredContent.risques.map((r: any) => r.code)).toContain('catnat');
+
+    await client.close();
+    await handler.close();
+  });
+
+  it('does not advertise listChanged, so clients never open subscriptions/listen', async () => {
+    // Même configuration que le MCP Inspector : le client SDK ouvre
+    // automatiquement `subscriptions/listen` si le serveur annonce `listChanged`.
+    const onChanged = () => {};
+    const { client, handler, methods } = await connectHttpClient('auto', {
+      listChanged: { tools: { onChanged }, prompts: { onChanged }, resources: { onChanged } },
+    });
+
+    const capabilities = client.getServerCapabilities();
+    expect(capabilities?.tools?.listChanged).toBeFalsy();
+    expect(capabilities?.resources?.listChanged).toBeFalsy();
+    expect(capabilities?.resources?.subscribe).toBeFalsy();
+    expect(client.autoOpenedSubscription).toBeUndefined();
+    expect(methods).not.toContain('subscriptions/listen');
 
     await client.close();
     await handler.close();

@@ -109,7 +109,7 @@ Le handler sert les deux générations du protocole :
 - **Clients 2026-07-28** : le protocole est sans état par conception. Il n'y a ni handshake `initialize` ni en-tête `Mcp-Session-Id` : chaque requête porte dans `params._meta` la version du protocole, les capacités et l'identité du client, et les en-têtes `MCP-Protocol-Version`, `Mcp-Method` (et `Mcp-Name` pour `tools/call` / `resources/read`) permettent le routage. Le client découvre le serveur avec `server/discover`.
 - **Clients 2025** (révisions 2025-03-26 à 2025-11-25) : repli *stateless*, avec une instance par requête et sans identifiant de session.
 
-Les requêtes `GET` et `DELETE` sur `/mcp` reçoivent une réponse `405` : il n'y a ni flux SSE autonome ni session à fermer. `createMcpExpressApp` (`@modelcontextprotocol/express`) valide les en-têtes `Host` et `Origin` lorsque le serveur écoute sur `127.0.0.1`, ou selon `ALLOWED_HOSTS` / `ALLOWED_ORIGINS` (une origine invalide reçoit une erreur 403).
+Les requêtes `GET` et `DELETE` sur `/mcp` reçoivent une réponse `405` : il n'y a ni flux SSE autonome ni session à fermer. La liste des outils et la ressource de la carte étant fixes, le serveur annonce `listChanged: false` pour `tools` et `resources` : les clients 2026-07-28 n'ouvrent donc pas de flux `subscriptions/listen`. Un client qui en ouvre un quand même reçoit l'accusé de réception, puis la fin du flux. `createMcpExpressApp` (`@modelcontextprotocol/express`) valide les en-têtes `Host` et `Origin` lorsque le serveur écoute sur `127.0.0.1`, ou selon `ALLOWED_HOSTS` / `ALLOWED_ORIGINS` (une origine invalide reçoit une erreur 403).
 
 ```mermaid
 sequenceDiagram
