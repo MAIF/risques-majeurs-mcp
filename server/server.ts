@@ -79,6 +79,15 @@ export function createServer() {
     },
     {
       instructions: INSTRUCTIONS,
+      // Les outils et la ressource sont fixes : le serveur n'émet jamais de
+      // notification `list_changed`. Sans cette déclaration, McpServer annonce
+      // `listChanged: true` et les clients 2026-07-28 ouvrent un flux
+      // `subscriptions/listen` qui resterait muet (le MCP Inspector finit par
+      // le couper sur timeout).
+      capabilities: {
+        tools: { listChanged: false },
+        resources: { listChanged: false },
+      },
     }
   );
 
